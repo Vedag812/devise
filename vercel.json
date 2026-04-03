@@ -2,5 +2,13 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "build": {
+    "env": {
+      "VITE_API_URL": "https://devise-backend.onrender.com"
+    }
+  },
+  "env": {
+    "VITE_API_URL": "https://devise-backend.onrender.com"
+  }
 }
