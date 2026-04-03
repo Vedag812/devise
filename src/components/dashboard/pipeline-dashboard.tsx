@@ -8,11 +8,11 @@ import {
     Skull, ArrowLeft
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { API } from "@/lib/api"
+import { API, fetchWithRetry } from "@/lib/api"
 import { PipelineFlow } from "./pipeline-flow"
 import { TokenInspector } from "./token-inspector"
 import { PolicyViewer } from "./policy-viewer"
-import { TradeHistory, EnforcementScorecard, ArchDiagram, StockCards } from "./dashboard-panels"
+import { TradeHistory, EnforcementScorecard, ArchDiagram, StockCards, MarketStatus, PortfolioTracker } from "./dashboard-panels"
 
 type PipelinePhase = "IDLE" | "SWARM_ANALYST" | "RISK_AGENT" | "ARMORCLAW" | "DEVICE_POLICY" | "TRADER" | "COMPLETE" | "BLOCKED"
 type NodeStatus = "idle" | "processing" | "allowed" | "blocked"
@@ -63,12 +63,16 @@ export function PipelineDashboard() {
 
     const auditRef = React.useRef<HTMLDivElement>(null)
 
+    const refreshPortfolio = React.useCallback(() => {
+        fetchWithRetry(API.portfolio).then(r => r.json()).then(d => setPortfolio(d)).catch(() => {})
+    }, [])
+
     // Load initial data
     React.useEffect(() => {
         Promise.all([
-            fetch(API.stocks).then(r => r.json()).catch(() => ({ tickers: [] })),
-            fetch(API.policy).then(r => r.json()).catch(() => ({})),
-            fetch(API.portfolio).then(r => r.json()).catch(() => null),
+            fetchWithRetry(API.stocks).then(r => r.json()).catch(() => ({ tickers: [] })),
+            fetchWithRetry(API.policy).then(r => r.json()).catch(() => ({})),
+            fetchWithRetry(API.portfolio).then(r => r.json()).catch(() => null),
         ]).then(([stockData, policyData, portfolioData]) => {
             setStocks(stockData.tickers || [])
             setPolicy(policyData.policy || null)
@@ -87,9 +91,9 @@ export function PipelineDashboard() {
     // Refresh portfolio after pipeline completes
     React.useEffect(() => {
         if (pipelineStatus === "EXECUTED") {
-            fetch(API.portfolio).then(r => r.json()).then(d => setPortfolio(d)).catch(() => {})
+            refreshPortfolio()
         }
-    }, [pipelineStatus])
+    }, [pipelineStatus, refreshPortfolio])
 
     // Auto-scroll audit log
     React.useEffect(() => {
@@ -326,6 +330,9 @@ export function PipelineDashboard() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {/* Market Status */}
+                    <MarketStatus className="hidden md:flex" />
+
                     {/* Status indicator */}
                     <div className={cn(
                         "flex items-center gap-2 px-3 py-1 text-[9px] font-black uppercase tracking-wider border transition-all duration-500",
@@ -343,7 +350,7 @@ export function PipelineDashboard() {
 
                     <div className="hidden lg:flex items-center gap-2 px-3 py-1 border border-flame/20 bg-flame/5">
                         <Waves className="w-3 h-3 text-flame animate-pulse" />
-                        <span className="text-[9px] text-flame/70 font-bold uppercase tracking-widest">DEMO_MODE</span>
+                        <span className="text-[9px] text-flame/70 font-bold uppercase tracking-widest">PAPER</span>
                     </div>
                 </div>
             </header>
@@ -366,38 +373,6 @@ export function PipelineDashboard() {
                     ))}
                 </div>
             </div>
-
-            {/* ── PORTFOLIO BAR ──────────────────────────────────────────── */}
-            {portfolio && (
-                <div className="h-9 bg-white/[0.015] border-b border-white/[0.04] flex items-center px-4 gap-6">
-                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-white/20">
-                        <Activity className="w-3 h-3 text-emerald-400/50" />
-                        <span>Alpaca Paper</span>
-                    </div>
-                    <div className="flex items-center gap-5">
-                        <div className="text-[9px]">
-                            <span className="text-white/20 uppercase">Equity </span>
-                            <span className="text-emerald-400 font-black">${Number(portfolio.equity).toLocaleString()}</span>
-                        </div>
-                        <div className="text-[9px]">
-                            <span className="text-white/20 uppercase">Cash </span>
-                            <span className="text-white/50 font-black">${Number(portfolio.cash).toLocaleString()}</span>
-                        </div>
-                        <div className="text-[9px]">
-                            <span className="text-white/20 uppercase">Buying Power </span>
-                            <span className="text-cyan-400/80 font-black">${Number(portfolio.buying_power).toLocaleString()}</span>
-                        </div>
-                        <div className="text-[9px]">
-                            <span className="text-white/20 uppercase">Spent </span>
-                            <span className="text-flame font-black">${(100000 - Number(portfolio.buying_power) / 2).toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
-                        </div>
-                        <div className="text-[9px] hidden sm:block">
-                            <span className="text-white/20 uppercase">Source </span>
-                            <span className="text-white/30 font-bold">{portfolio.source}</span>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* ── MAIN CONTENT ─────────────────────────────────────────── */}
             <main className="flex-1 flex flex-col lg:flex-row overflow-hidden h-[calc(100vh-88px)]">
@@ -449,43 +424,13 @@ export function PipelineDashboard() {
                                     exit={{ opacity: 0, scale: 0.95 }}
                                     className="h-full"
                                 >
-                                    {/* Portfolio Summary Cards */}
-                                    {portfolio && (
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-                                            {[
-                                                { label: "Portfolio Value", value: `$${Number(portfolio.equity).toLocaleString()}`, color: "emerald", sub: "Total Equity" },
-                                                { label: "Available Cash", value: `$${Number(portfolio.cash).toLocaleString()}`, color: "white", sub: "Buying Power" },
-                                                { label: "Spent", value: `$${(100000 - Number(portfolio.cash)).toLocaleString(undefined, {maximumFractionDigits: 0})}`, color: "flame", sub: "Invested" },
-                                                { label: "P&L", value: `$${(Number(portfolio.equity) - 100000).toLocaleString(undefined, {maximumFractionDigits: 2})}`, color: Number(portfolio.equity) >= 100000 ? "emerald" : "red", sub: Number(portfolio.equity) >= 100000 ? "Profit" : "Loss" },
-                                            ].map((card, i) => (
-                                                <motion.div
-                                                    key={card.label}
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: i * 0.05 }}
-                                                    className="border border-white/[0.06] bg-white/[0.015] p-4"
-                                                >
-                                                    <div className="text-[8px] font-black uppercase tracking-widest text-white/20 mb-1">{card.label}</div>
-                                                    <div className={cn(
-                                                        "text-xl font-black",
-                                                        card.color === "emerald" ? "text-emerald-400" :
-                                                        card.color === "flame" ? "text-flame" :
-                                                        card.color === "red" ? "text-red-400" :
-                                                        "text-white/70"
-                                                    )}>{card.value}</div>
-                                                    <div className="text-[7px] text-white/15 uppercase tracking-wider mt-0.5">{card.sub}</div>
-                                                </motion.div>
-                                            ))}
-                                        </div>
-                                    )}
-
                                     {/* 2-Column Layout */}
                                     <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
                                         {/* LEFT: Pipeline Controls (3/5) */}
                                         <div className="lg:col-span-3 space-y-4">
                                             <div className="text-center space-y-1 mb-2">
                                                 <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight">Enforcement<span className="text-flame">_Pipeline</span></h2>
-                                                <p className="text-[9px] text-white/20 uppercase tracking-[0.2em]">ArmorClaw + Policy Engine</p>
+                                                <p className="text-[9px] text-white/20 uppercase tracking-[0.2em]">ArmorClaw + Policy Engine // Intent-Aware Execution</p>
                                             </div>
 
                                             {/* Seed Input */}
@@ -548,12 +493,15 @@ export function PipelineDashboard() {
                                                     </span>
                                                 </button>
                                             </div>
-                                        </div>
 
-                                        {/* RIGHT: Overview Panels (2/5) */}
-                                        <div className="lg:col-span-2 space-y-3">
+                                            {/* Enforcement + Architecture */}
                                             <EnforcementScorecard />
                                             <ArchDiagram />
+                                        </div>
+
+                                        {/* RIGHT: Portfolio + Trade History (2/5) */}
+                                        <div className="lg:col-span-2 space-y-3">
+                                            <PortfolioTracker portfolio={portfolio} onRefresh={refreshPortfolio} />
                                             <TradeHistory />
                                         </div>
                                     </div>

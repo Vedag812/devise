@@ -22,4 +22,6 @@ services:
       - key: DEVICE_SECRET_KEY
         sync: false
       - key: PYTHON_VERSION
-        value: "3.13.0"
+        value: "3.11.7"
+      - key: RENDER_EXTERNAL_URL
+        value: "https://devise-backend.onrender.com"

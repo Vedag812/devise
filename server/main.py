@@ -343,6 +343,26 @@ app.add_middleware(
 )
 
 
+# ── Keepalive (prevents Render free tier spin-down) ──────────────────────
+import urllib.request
+
+async def keepalive_ping():
+    """Self-ping every 10 minutes to prevent Render from sleeping."""
+    render_url = os.getenv("RENDER_EXTERNAL_URL", "")
+    if not render_url:
+        return  # Only runs on Render, not locally
+    while True:
+        await asyncio.sleep(600)  # 10 minutes
+        try:
+            urllib.request.urlopen(f"{render_url}/", timeout=10)
+            print(f"[keepalive] pinged {render_url}")
+        except Exception:
+            pass
+
+@app.on_event("startup")
+async def start_keepalive():
+    asyncio.create_task(keepalive_ping())
+
 # ── Models ───────────────────────────────────────────────────────────────
 class PipelineRequest(BaseModel):
     ticker: str = "NVDA"

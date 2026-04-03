@@ -14,3 +14,21 @@ export const API = {
     pipelineRun: `${API_BASE}/v1/pipeline/run`,
     pipelineAttack: `${API_BASE}/v1/pipeline/attack`,
 }
+
+// Retry wrapper for Render cold starts (free tier wakes up in ~30s)
+export async function fetchWithRetry(url: string, options?: RequestInit, retries = 3): Promise<Response> {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const res = await fetch(url, { ...options, signal: AbortSignal.timeout(15000) })
+            if (res.ok) return res
+            // Server returned error - retry
+        } catch {
+            // Network error or timeout - server likely waking up
+        }
+        if (i < retries - 1) {
+            await new Promise(r => setTimeout(r, 3000 * (i + 1))) // 3s, 6s backoff
+        }
+    }
+    // Final attempt without timeout
+    return fetch(url, options)
+}
