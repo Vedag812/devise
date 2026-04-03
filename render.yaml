@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: devise-backend
+    env: python
+    runtime: python
+    repo: https://github.com/Vedag812/devise
+    branch: main
+    rootDir: server
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: APCA_API_KEY_ID
+        sync: false
+      - key: APCA_API_SECRET_KEY
+        sync: false
+      - key: APCA_API_BASE_URL
+        value: https://paper-api.alpaca.markets
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ARMORIQ_API_KEY
+        sync: false
+      - key: DEVICE_SECRET_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.13.0"
