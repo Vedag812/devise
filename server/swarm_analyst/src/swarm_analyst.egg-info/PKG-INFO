@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: swarm-analyst
+Version: 0.1.0
+Summary: Parallel multi-agent analyst engine using Gemini 1.5 Pro
+Requires-Python: >=3.11
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn>=0.30.0
+Requires-Dist: google-genai>=0.2.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: pydantic>=2.7.0
+Requires-Dist: pydantic-settings>=2.4.0
+Requires-Dist: yfinance>=1.2.0
+Requires-Dist: websockets>=13.0

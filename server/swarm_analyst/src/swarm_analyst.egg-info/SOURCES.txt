@@ -1,0 +1,15 @@
+pyproject.toml
+src/main.py
+src/agents/aggregator.py
+src/agents/personas.py
+src/agents/scanner.py
+src/core/config.py
+src/core/engine.py
+src/core/market.py
+src/core/models.py
+src/core/ws_manager.py
+src/swarm_analyst.egg-info/PKG-INFO
+src/swarm_analyst.egg-info/SOURCES.txt
+src/swarm_analyst.egg-info/dependency_links.txt
+src/swarm_analyst.egg-info/requires.txt
+src/swarm_analyst.egg-info/top_level.txt

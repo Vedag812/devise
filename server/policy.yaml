@@ -1,0 +1,25 @@
+policy:
+  ticker_universe: ["NVDA", "AAPL", "MSFT"]
+  max_order_size: 50
+  max_daily_exposure_usd: 5000
+  market_hours_only: true
+  earnings_blackout_days: 3
+
+  file_access:
+    read_dirs: ["./data/market/", "./data/earnings/"]
+    write_dirs: ["./output/reports/"]
+
+  forbidden_tools:
+    - shell_exec
+    - http_post_external
+
+  data_restrictions:
+    - no_pii
+    - no_account_numbers_in_args
+
+delegation:
+  risk_to_trader:
+    max_quantity: 50
+    ticker_lock: true
+    sub_delegation: false
+    token_ttl_minutes: 15

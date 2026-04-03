@@ -1,0 +1,138 @@
+# DEVISE Financial Enforcement Policy
+# This is the declarative, structured policy model required by the hackathon.
+# ArmorClaw enforces these rules at runtime — not simple if-else checks.
+
+policy:
+  name: "DEVISE Financial Enforcement Policy"
+  version: "1.0.0"
+  description: "Intent-aware policy for autonomous financial agent enforcement"
+  
+  # ── Global Constraints ──────────────────────────────────
+  global:
+    fail_mode: "closed"  # Block ALL actions when intent cannot be verified
+    audit_level: "full"  # Log every decision with reasoning
+    
+  # ── Ticker Universe ─────────────────────────────────────
+  ticker_universe:
+    allowed:
+      - "NVDA"   # NVIDIA Corporation
+      - "AAPL"   # Apple Inc
+      - "MSFT"   # Microsoft Corporation
+    enforcement: "strict"  # Any ticker outside universe = BLOCK
+    
+  # ── Trade Size Limits ───────────────────────────────────
+  trade_limits:
+    per_order:
+      max_shares: 50
+      max_value_usd: 5000
+    daily_aggregate:
+      max_exposure_usd: 15000
+      max_orders: 20
+    portfolio:
+      max_single_ticker_allocation_pct: 40
+      
+  # ── Time Restrictions ───────────────────────────────────
+  time_restrictions:
+    market_hours_only: true
+    earnings_blackout:
+      enabled: true
+      window_hours_before: 24   # No trades 24h before earnings
+      window_hours_after: 2     # No trades 2h after earnings
+      
+  # ── Tool Access Control ─────────────────────────────────
+  tool_policy:
+    analyst_agent:
+      allow:
+        - "market_data_fetch"
+        - "earnings_fetch"
+        - "report_write"
+        - "web_search"
+      deny:
+        - "order_place"
+        - "bash"
+        - "exec"
+        - "web_upload"
+        - "delegation_token_issue"
+        
+    risk_agent:
+      allow:
+        - "read"
+        - "portfolio_positions"
+        - "portfolio_metrics"
+        - "delegation_token_issue"
+        - "report_write"
+      deny:
+        - "order_place"
+        - "bash"
+        - "exec"
+        - "web_upload"
+        - "web_fetch"
+        
+    trader_agent:
+      allow:
+        - "order_place"
+        - "order_status"
+        - "read"
+        - "report_write"
+      deny:
+        - "market_data_fetch"
+        - "portfolio_positions"
+        - "bash"
+        - "exec"
+        - "web_upload"
+        - "delegation_token_issue"
+        
+  # ── Data Access Control ─────────────────────────────────
+  data_policy:
+    allowed_directories:
+      read:
+        - "./data/"
+        - "./output/"
+      write:
+        - "./output/reports/"
+        - "./output/recommendations/"
+        - "./output/risk-reports/"
+        - "./output/tokens/"
+        - "./output/trades/"
+    forbidden_patterns:
+      - "*.env"
+      - "*.key"
+      - "*.pem"
+      - "*credentials*"
+      - "*secret*"
+      
+  # ── Delegation Rules ────────────────────────────────────
+  delegation:
+    enabled: true
+    max_chain_depth: 1          # No sub-delegation
+    token_ttl_seconds: 120      # Tokens expire in 2 minutes
+    signature_algorithm: "hmac-sha256"
+    scope_inheritance: "none"   # Each agent has its own scope, no inheritance
+    rules:
+      - issuer: "risk_agent"
+        delegatee: "trader_agent"
+        max_quantity: 50
+        max_value_usd: 5000
+        allowed_actions: ["BUY", "SELL"]
+        
+  # ── Prompt Injection Defense ────────────────────────────
+  injection_defense:
+    scan_tool_arguments: true
+    scan_file_contents: true
+    block_patterns:
+      - "IGNORE PREVIOUS"
+      - "IGNORE ALL PREVIOUS"
+      - "SYSTEM OVERRIDE"
+      - "ADMIN ACCESS"
+      - "upload.*pastebin"
+      - "curl.*http"
+      - "wget.*http"
+      - "base64.*encode"
+      
+  # ── Audit Trail ─────────────────────────────────────────
+  audit:
+    log_all_decisions: true
+    log_tool_arguments: true
+    log_enforcement_reasoning: true
+    retention_days: 90
+    format: "structured_json"

@@ -1,0 +1,117 @@
+[
+  {
+    "id": "8d513bba",
+    "timestamp": "2026-04-03 00:28:32",
+    "report": {
+      "ticker": "MNM",
+      "action": "HOLD",
+      "quantity": 0,
+      "confidence_score": 0.5,
+      "consensus_reasoning": "Consensus aggregation timeout or error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}",
+      "analyst_summaries": [
+        {
+          "sector": "Semiconductors",
+          "verdict": "NEUTRAL",
+          "reason": "Error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
+        },
+        {
+          "sector": "Tech",
+          "verdict": "NEUTRAL",
+          "reason": "Error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "87801899",
+    "timestamp": "2026-04-03 00:25:41",
+    "report": {
+      "ticker": "NVDA",
+      "action": "HOLD",
+      "quantity": 0,
+      "confidence_score": 0.5,
+      "consensus_reasoning": "Consensus aggregation timeout or error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}",
+      "analyst_summaries": [
+        {
+          "sector": "Semiconductors",
+          "verdict": "NEUTRAL",
+          "reason": "Error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
+        },
+        {
+          "sector": "Tech",
+          "verdict": "NEUTRAL",
+          "reason": "Error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "3a3e2417",
+    "timestamp": "2026-04-03 00:24:14",
+    "report": {
+      "ticker": "NVDA",
+      "action": "HOLD",
+      "quantity": 0,
+      "confidence_score": 0.5,
+      "consensus_reasoning": "Consensus aggregation timeout or error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}",
+      "analyst_summaries": [
+        {
+          "sector": "Semiconductors",
+          "verdict": "NEUTRAL",
+          "reason": "Error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
+        },
+        {
+          "sector": "Tech",
+          "verdict": "NEUTRAL",
+          "reason": "Error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "0553903e",
+    "timestamp": "2026-04-03 00:23:41",
+    "report": {
+      "ticker": "AMAZON",
+      "action": "HOLD",
+      "quantity": 0,
+      "confidence_score": 0.5,
+      "consensus_reasoning": "Consensus aggregation timeout or error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}",
+      "analyst_summaries": [
+        {
+          "sector": "Semiconductors",
+          "verdict": "NEUTRAL",
+          "reason": "Error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
+        },
+        {
+          "sector": "Tech",
+          "verdict": "NEUTRAL",
+          "reason": "Error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "1da5b31e",
+    "timestamp": "2026-04-03 00:23:18",
+    "report": {
+      "ticker": "NVDA",
+      "action": "HOLD",
+      "quantity": 0,
+      "confidence_score": 0.5,
+      "consensus_reasoning": "Consensus aggregation timeout or error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}",
+      "analyst_summaries": [
+        {
+          "sector": "Semiconductors",
+          "verdict": "NEUTRAL",
+          "reason": "Error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
+        },
+        {
+          "sector": "Tech",
+          "verdict": "NEUTRAL",
+          "reason": "Error: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
+        }
+      ]
+    }
+  }
+]
