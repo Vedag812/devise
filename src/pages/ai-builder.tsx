@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Coins, User, Sparkles, Shield, Activity, Target } from 'lucide-react';
+import { ArrowLeft, Coins, User, Shield, Activity, Target } from 'lucide-react';
 import { useChat } from '@/hooks/use-chat';
 import { ChatPanel } from '@/components/builder/chat-panel';
 import { ChatInput } from '@/components/builder/chat-input';

@@ -50,3 +50,4 @@ idea(Ossomehacks)*.md
 .agents
 .continue
 .gemini
+.vercel

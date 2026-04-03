@@ -3,7 +3,7 @@
 import * as React from "react"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { Lock, Clock, Shield, Hash, User, TrendingUp, Layers, AlertTriangle } from "lucide-react"
+import { Lock, Clock, Shield, Hash, User, TrendingUp, Layers } from "lucide-react"
 
 interface TokenInspectorProps {
     token: Record<string, any> | null

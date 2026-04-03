@@ -1,9 +1,8 @@
 "use client"
 
-import * as React from "react"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { FileText, ShieldAlert, CheckCircle2, XCircle } from "lucide-react"
+import { FileText, CheckCircle2, XCircle } from "lucide-react"
 
 interface PolicyViewerProps {
     policy: Record<string, any> | null

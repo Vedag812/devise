@@ -3,7 +3,7 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { Brain, FileKey2, ShieldCheck, Terminal, Rocket, ArrowRight } from "lucide-react"
+import { Brain, FileKey2, ShieldCheck, Rocket, ArrowRight } from "lucide-react"
 
 type NodePhase = "SWARM_ANALYST" | "RISK_AGENT" | "ARMORCLAW" | "DEVICE_POLICY" | "TRADER"
 type NodeStatus = "idle" | "processing" | "allowed" | "blocked"
@@ -29,7 +29,7 @@ const COLOR_MAP: Record<string, { border: string; bg: string; text: string; glow
     green: { border: "border-emerald-500", bg: "bg-emerald-500/10", text: "text-emerald-400", glow: "shadow-[0_0_30px_rgba(16,185,129,0.3)]" },
 }
 
-export function PipelineFlow({ activePhase, nodeStatuses, ticker, className }: PipelineFlowProps) {
+export function PipelineFlow({ activePhase, nodeStatuses, className }: PipelineFlowProps) {
     return (
         <div className={cn("flex items-center justify-center gap-1 sm:gap-2 py-6 overflow-x-auto", className)}>
             {NODES.map((node, idx) => {
