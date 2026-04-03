@@ -59,14 +59,28 @@ export function PortfolioTracker({ portfolio, onRefresh, className }: PortfolioT
         return () => clearInterval(t)
     }, [onRefresh])
 
+    const [pendingOrders, setPendingOrders] = React.useState<any[]>([])
+    React.useEffect(() => {
+        fetchWithRetry(API.orders)
+            .then(r => r.json())
+            .then(d => setPendingOrders((d.orders || []).filter((o: any) => o.status === "accepted" || o.status === "new" || o.status === "pending_new")))
+            .catch(() => {})
+    }, [])
+
     if (!portfolio) return null
 
     const equity = Number(portfolio.equity)
     const cash = Number(portfolio.cash)
-    const spent = 100000 - cash
+    const positions = portfolio.positions || []
+    // Calculate committed: sum of pending orders estimated value
+    const committed = pendingOrders.reduce((sum: number, o: any) => {
+        const price = Number(o.filled_avg_price) || 0
+        const qty = Number(o.qty) || 0
+        return sum + (price > 0 ? price * qty : qty * 150) // est $150/share if no price
+    }, 0)
+    const totalInvested = positions.reduce((sum: number, p: any) => sum + Number(p.market_value || 0), 0) + committed
     const pnl = equity - 100000
     const pnlPct = ((equity - 100000) / 100000 * 100)
-    const positions = portfolio.positions || []
 
     return (
         <div className={cn("border border-white/[0.06] bg-white/[0.01] overflow-hidden", className)}>
@@ -84,12 +98,10 @@ export function PortfolioTracker({ portfolio, onRefresh, className }: PortfolioT
             </div>
 
             {/* Main Stats */}
-            <div className="grid grid-cols-4 divide-x divide-white/[0.04]">
+            <div className="grid grid-cols-2 divide-x divide-white/[0.04]">
                 {[
                     { label: "Equity", value: `$${equity.toLocaleString()}`, icon: DollarSign, color: "emerald" },
                     { label: "Cash", value: `$${cash.toLocaleString()}`, icon: DollarSign, color: "white" },
-                    { label: "Invested", value: `$${spent.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: BarChart3, color: "flame" },
-                    { label: "P&L", value: `${pnl >= 0 ? "+" : ""}$${pnl.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, icon: TrendingUp, color: pnl >= 0 ? "emerald" : "red", sub: `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}%` },
                 ].map((card, i) => (
                     <motion.div
                         key={card.label}
@@ -98,15 +110,42 @@ export function PortfolioTracker({ portfolio, onRefresh, className }: PortfolioT
                         transition={{ delay: i * 0.05 }}
                         className="px-3 py-3 text-center"
                     >
-                        <card.icon className={cn("w-3.5 h-3.5 mx-auto mb-1", card.color === "emerald" ? "text-emerald-400/50" : card.color === "red" ? "text-red-400/50" : card.color === "flame" ? "text-flame/50" : "text-white/20")} />
-                        <div className={cn("text-lg font-black", card.color === "emerald" ? "text-emerald-400" : card.color === "red" ? "text-red-400" : card.color === "flame" ? "text-flame" : "text-white/60")}>
+                        <card.icon className={cn("w-3.5 h-3.5 mx-auto mb-1", card.color === "emerald" ? "text-emerald-400/50" : "text-white/20")} />
+                        <div className={cn("text-xl font-black", card.color === "emerald" ? "text-emerald-400" : "text-white/60")}>
                             {card.value}
                         </div>
                         <div className="text-[7px] font-black text-white/20 uppercase tracking-widest">{card.label}</div>
-                        {card.sub && <div className={cn("text-[8px] font-bold mt-0.5", pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>{card.sub}</div>}
                     </motion.div>
                 ))}
             </div>
+            <div className="grid grid-cols-3 divide-x divide-white/[0.04] border-t border-white/[0.04]">
+                {[
+                    { label: "Invested", value: `$${totalInvested.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "flame", sub: totalInvested === 0 && pendingOrders.length > 0 ? `${pendingOrders.length} pending` : "" },
+                    { label: "P&L", value: `${pnl >= 0 ? "+" : ""}$${pnl.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: pnl >= 0 ? "emerald" : "red", sub: `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}%` },
+                    { label: "Orders", value: `${pendingOrders.length}`, color: pendingOrders.length > 0 ? "cyan" : "white", sub: pendingOrders.length > 0 ? "PENDING" : "NONE" },
+                ].map((card, i) => (
+                    <motion.div
+                        key={card.label}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 + 0.1 }}
+                        className="px-3 py-2.5 text-center"
+                    >
+                        <div className={cn("text-lg font-black",
+                            card.color === "emerald" ? "text-emerald-400" :
+                            card.color === "red" ? "text-red-400" :
+                            card.color === "flame" ? "text-flame" :
+                            card.color === "cyan" ? "text-cyan-400" :
+                            "text-white/40"
+                        )}>
+                            {card.value}
+                        </div>
+                        <div className="text-[7px] font-black text-white/20 uppercase tracking-widest">{card.label}</div>
+                        {card.sub && <div className={cn("text-[7px] font-bold mt-0.5", card.color === "emerald" ? "text-emerald-400/60" : card.color === "red" ? "text-red-400/60" : card.color === "cyan" ? "text-cyan-400/60" : "text-flame/60")}>{card.sub}</div>}
+                </motion.div>
+                ))}
+            </div>
+
 
             {/* Positions */}
             {positions.length > 0 && (

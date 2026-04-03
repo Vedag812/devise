@@ -706,6 +706,19 @@ export function PipelineDashboard() {
                                             </button>
                                         </motion.div>
                                     )}
+
+                                    {/* Post-Pipeline Portfolio + Orders */}
+                                    {!isRunning && (pipelineStatus === "EXECUTED" || pipelineStatus === "ALL_ATTACKS_BLOCKED") && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.3 }}
+                                            className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-4"
+                                        >
+                                            <PortfolioTracker portfolio={portfolio} onRefresh={refreshPortfolio} />
+                                            <TradeHistory />
+                                        </motion.div>
+                                    )}
                                 </motion.div>
                             )}
                         </AnimatePresence>
