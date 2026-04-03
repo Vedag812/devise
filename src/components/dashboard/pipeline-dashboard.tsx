@@ -440,87 +440,122 @@ export function PipelineDashboard() {
                     {/* Center Area: Input or Results */}
                     <div className="flex-1 overflow-y-auto p-4 sm:p-6 relative min-h-0">
 
-                        {/* ── IDLE STATE: Input Form ──────────────── */}
+                        {/* ── IDLE STATE: Structured Dashboard ──────────────── */}
                         <AnimatePresence>
                             {isIdle && (
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
-                                    className="flex flex-col gap-6 max-w-3xl mx-auto py-4"
+                                    className="h-full"
                                 >
-                                    <div className="text-center space-y-2">
-                                        <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight">Enforcement<span className="text-flame">_Pipeline</span></h2>
-                                        <p className="text-[10px] text-white/25 uppercase tracking-[0.3em]">ArmorClaw + Device Policy // Intent-Aware Autonomous Enforcement</p>
-                                    </div>
-
-                                    {/* Seed Input */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-[9px] font-black uppercase text-white/20 tracking-widest">
-                                                <FileText className="w-3 h-3 text-flame/50" /> SEED_MATERIAL
-                                            </div>
-                                            <span className="text-[8px] text-white/10 uppercase">Click a sample below ↓</span>
-                                        </div>
-                                        <textarea
-                                            placeholder="Paste financial news, earnings report, or market event..."
-                                            value={seed}
-                                            onChange={(e) => setSeed(e.target.value)}
-                                            className="w-full h-24 sm:h-28 bg-white/[0.02] border border-white/[0.06] p-4 text-xs text-white/60 focus:border-flame/40 outline-none transition-all resize-none placeholder:text-white/10"
-                                        />
-                                        {/* Sample Seeds */}
-                                        <div className="flex flex-wrap gap-2">
+                                    {/* Portfolio Summary Cards */}
+                                    {portfolio && (
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
                                             {[
-                                                { label: "NVDA Earnings", ticker: "NVDA", text: "NVIDIA Q4 2025 Results: Revenue $35.1B (+94% YoY), Data Center $27.1B, Gross Margin 76%. Beat EPS estimates by 12%. Jensen Huang: 'Blackwell production ramping, demand far exceeds supply.' Strong AI infrastructure spending across hyperscalers." },
-                                                { label: "AAPL Revenue", ticker: "AAPL", text: "Apple Q1 2026 Results: Revenue $124.3B (record quarter), iPhone revenue +6% to $69.1B, Services revenue $26.3B (+14% YoY). Installed base exceeds 2.35 billion devices. Apple Intelligence driving strong upgrade cycle for iPhone 16 Pro models." },
-                                                { label: "MSFT Cloud", ticker: "MSFT", text: "Microsoft Q2 FY2026: Intelligent Cloud revenue $25.5B (+19%), Azure growth 29%. Microsoft 365 Copilot adoption accelerating with 60% of Fortune 500 using paid licenses. GitHub Copilot exceeds 1.8M paid subscribers. Total revenue $65.6B." },
-                                            ].map((s) => (
-                                                <button
-                                                    key={s.label}
-                                                    onClick={() => { setSeed(s.text); setSelectedTicker(s.ticker); }}
-                                                    className="px-3 py-1.5 border border-white/[0.06] text-[9px] font-bold text-white/25 uppercase tracking-wider hover:border-flame/30 hover:text-flame/60 transition-all"
+                                                { label: "Portfolio Value", value: `$${Number(portfolio.equity).toLocaleString()}`, color: "emerald", sub: "Total Equity" },
+                                                { label: "Available Cash", value: `$${Number(portfolio.cash).toLocaleString()}`, color: "white", sub: "Buying Power" },
+                                                { label: "Spent", value: `$${(100000 - Number(portfolio.cash)).toLocaleString(undefined, {maximumFractionDigits: 0})}`, color: "flame", sub: "Invested" },
+                                                { label: "P&L", value: `$${(Number(portfolio.equity) - 100000).toLocaleString(undefined, {maximumFractionDigits: 2})}`, color: Number(portfolio.equity) >= 100000 ? "emerald" : "red", sub: Number(portfolio.equity) >= 100000 ? "Profit" : "Loss" },
+                                            ].map((card, i) => (
+                                                <motion.div
+                                                    key={card.label}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: i * 0.05 }}
+                                                    className="border border-white/[0.06] bg-white/[0.015] p-4"
                                                 >
-                                                    {s.label}
-                                                </button>
+                                                    <div className="text-[8px] font-black uppercase tracking-widest text-white/20 mb-1">{card.label}</div>
+                                                    <div className={cn(
+                                                        "text-xl font-black",
+                                                        card.color === "emerald" ? "text-emerald-400" :
+                                                        card.color === "flame" ? "text-flame" :
+                                                        card.color === "red" ? "text-red-400" :
+                                                        "text-white/70"
+                                                    )}>{card.value}</div>
+                                                    <div className="text-[7px] text-white/15 uppercase tracking-wider mt-0.5">{card.sub}</div>
+                                                </motion.div>
                                             ))}
                                         </div>
-                                    </div>
+                                    )}
 
-                                    {/* Ticker Selection — Stock Price Cards */}
-                                    <StockCards
-                                        stocks={stocks}
-                                        selectedTicker={selectedTicker}
-                                        onSelect={setSelectedTicker}
-                                    />
+                                    {/* 2-Column Layout */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+                                        {/* LEFT: Pipeline Controls (3/5) */}
+                                        <div className="lg:col-span-3 space-y-4">
+                                            <div className="text-center space-y-1 mb-2">
+                                                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight">Enforcement<span className="text-flame">_Pipeline</span></h2>
+                                                <p className="text-[9px] text-white/20 uppercase tracking-[0.2em]">ArmorClaw + Policy Engine</p>
+                                            </div>
 
-                                    {/* Action Buttons */}
-                                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                                        <button
-                                            onClick={() => runPipeline(false)}
-                                            className="group relative flex-1 px-8 py-5 bg-flame text-black font-black uppercase tracking-[0.3em] text-sm transition-all hover:bg-white active:translate-y-0.5 overflow-hidden"
-                                        >
-                                            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                                            <span className="relative flex items-center justify-center gap-3">
-                                                <Play className="w-4 h-4" />
-                                                Initialize Pipeline
-                                            </span>
-                                        </button>
-                                        <button
-                                            onClick={() => runPipeline(true)}
-                                            className="group relative sm:w-auto px-6 py-5 bg-red-500/10 border-2 border-red-500/30 text-red-400 font-black uppercase tracking-[0.2em] text-xs transition-all hover:bg-red-500 hover:text-white active:translate-y-0.5 overflow-hidden"
-                                        >
-                                            <span className="relative flex items-center justify-center gap-2">
-                                                <Skull className="w-4 h-4" />
-                                                Attack Demo
-                                            </span>
-                                        </button>
-                                    </div>
+                                            {/* Seed Input */}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase text-white/20 tracking-widest">
+                                                        <FileText className="w-3 h-3 text-flame/50" /> SEED_MATERIAL
+                                                    </div>
+                                                    <span className="text-[8px] text-white/10 uppercase">Click a sample ↓</span>
+                                                </div>
+                                                <textarea
+                                                    placeholder="Paste financial news, earnings report, or market event..."
+                                                    value={seed}
+                                                    onChange={(e) => setSeed(e.target.value)}
+                                                    className="w-full h-20 bg-white/[0.02] border border-white/[0.06] p-3 text-xs text-white/60 focus:border-flame/40 outline-none transition-all resize-none placeholder:text-white/10"
+                                                />
+                                                <div className="flex flex-wrap gap-2">
+                                                    {[
+                                                        { label: "NVDA Earnings", ticker: "NVDA", text: "NVIDIA Q4 2025 Results: Revenue $35.1B (+94% YoY), Data Center $27.1B, Gross Margin 76%. Beat EPS estimates by 12%. Jensen Huang: 'Blackwell production ramping, demand far exceeds supply.' Strong AI infrastructure spending across hyperscalers." },
+                                                        { label: "AAPL Revenue", ticker: "AAPL", text: "Apple Q1 2026 Results: Revenue $124.3B (record quarter), iPhone revenue +6% to $69.1B, Services revenue $26.3B (+14% YoY). Installed base exceeds 2.35 billion devices. Apple Intelligence driving strong upgrade cycle for iPhone 16 Pro models." },
+                                                        { label: "MSFT Cloud", ticker: "MSFT", text: "Microsoft Q2 FY2026: Intelligent Cloud revenue $25.5B (+19%), Azure growth 29%. Microsoft 365 Copilot adoption accelerating with 60% of Fortune 500 using paid licenses. GitHub Copilot exceeds 1.8M paid subscribers. Total revenue $65.6B." },
+                                                    ].map((s) => (
+                                                        <button
+                                                            key={s.label}
+                                                            onClick={() => { setSeed(s.text); setSelectedTicker(s.ticker); }}
+                                                            className="px-3 py-1.5 border border-white/[0.06] text-[9px] font-bold text-white/25 uppercase tracking-wider hover:border-flame/30 hover:text-flame/60 transition-all"
+                                                        >
+                                                            {s.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
 
-                                    {/* Dashboard Info Panels */}
-                                    <div className="space-y-4 pt-2">
-                                        <EnforcementScorecard />
-                                        <ArchDiagram />
-                                        <TradeHistory />
+                                            {/* Stock Cards */}
+                                            <StockCards
+                                                stocks={stocks}
+                                                selectedTicker={selectedTicker}
+                                                onSelect={setSelectedTicker}
+                                            />
+
+                                            {/* Action Buttons */}
+                                            <div className="flex gap-3 pt-1">
+                                                <button
+                                                    onClick={() => runPipeline(false)}
+                                                    className="group relative flex-1 px-6 py-4 bg-flame text-black font-black uppercase tracking-[0.3em] text-xs transition-all hover:bg-white active:translate-y-0.5 overflow-hidden"
+                                                >
+                                                    <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                                                    <span className="relative flex items-center justify-center gap-2">
+                                                        <Play className="w-3.5 h-3.5" />
+                                                        Initialize Pipeline
+                                                    </span>
+                                                </button>
+                                                <button
+                                                    onClick={() => runPipeline(true)}
+                                                    className="group relative px-5 py-4 bg-red-500/10 border-2 border-red-500/30 text-red-400 font-black uppercase tracking-[0.15em] text-[10px] transition-all hover:bg-red-500 hover:text-white active:translate-y-0.5"
+                                                >
+                                                    <span className="relative flex items-center justify-center gap-2">
+                                                        <Skull className="w-3.5 h-3.5" />
+                                                        Attack Demo
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* RIGHT: Overview Panels (2/5) */}
+                                        <div className="lg:col-span-2 space-y-3">
+                                            <EnforcementScorecard />
+                                            <ArchDiagram />
+                                            <TradeHistory />
+                                        </div>
                                     </div>
                                 </motion.div>
                             )}
