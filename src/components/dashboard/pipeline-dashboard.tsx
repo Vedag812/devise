@@ -650,12 +650,16 @@ export function PipelineDashboard() {
                                             <div className="flex items-center gap-2 mb-3">
                                                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                                                 <span className="text-sm font-black text-emerald-400 uppercase">Trade Executed</span>
+                                                {tradeResult.status && (
+                                                    <span className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-400 font-black uppercase">{tradeResult.status}</span>
+                                                )}
                                             </div>
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px]">
+                                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-[10px]">
                                                 <div><span className="text-white/30">Symbol:</span> <span className="font-black text-white">{tradeResult.symbol}</span></div>
                                                 <div><span className="text-white/30">Qty:</span> <span className="font-black text-white">{tradeResult.qty}</span></div>
-                                                <div><span className="text-white/30">Price:</span> <span className="font-black text-emerald-400">${tradeResult.filled_avg_price}</span></div>
+                                                <div><span className="text-white/30">Price:</span> <span className="font-black text-emerald-400">{tradeResult.filled_avg_price ? `$${tradeResult.filled_avg_price}` : "Market Order (pending fill)"}</span></div>
                                                 <div><span className="text-white/30">Source:</span> <span className="font-black text-white/50">{tradeResult.source}</span></div>
+                                                <div><span className="text-white/30">Order ID:</span> <span className="font-black text-white/30 font-mono">{tradeResult.order_id?.slice(0, 8) || "—"}</span></div>
                                             </div>
                                         </motion.div>
                                     )}
