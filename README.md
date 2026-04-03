@@ -122,11 +122,23 @@ The file `skills/policy/devise_policy.yaml` is the single source of truth for al
 - **Backend API:** [https://devise-backend.onrender.com](https://devise-backend.onrender.com)
 - **Demo Video:** [PASTE YOUR VIDEO LINK HERE]
 
-### Demo Scenarios
+## Testing the System
 
-1. **Allowed Trade** — Select NVDA/AAPL/MSFT, click "Initialize Pipeline." All 4 agents process the trade, delegation token is issued, and the order executes on Alpaca.
-2. **Blocked Trade** — Select TSLA, click "Initialize Pipeline." ArmorClaw blocks the trade because TSLA is outside the approved ticker universe.
-3. **Attack Demo** — Click "Attack Demo" to simulate a prompt injection attack. ArmorClaw detects the injected payload and blocks execution at both the Risk Agent and ArmorClaw layers.
+This section is critical for verifying that the cryptographic intent boundaries act as documented. Please follow these scenarios explicitly to test the pipeline.
+
+### Scenario 1: Normal Trade
+- **Action**: Select a valid stock (e.g., `NVDA`, `AAPL`, or `MSFT`).
+- **Action**: Click "Initialize Pipeline."
+- **Expected Outcome**: Observe approval across all 4 agents. The intent reasoning generates a valid `DeviceToken` and the order executes natively on Alpaca.
+
+### Scenario 2: Policy Violation
+- **Action**: Select a blocked ticker outside the `.yaml` universe (e.g., `TSLA (Blocked)`).
+- **Action**: Click "Initialize Pipeline."
+- **Expected Outcome**: System strictly rejects the trade at the ArmorClaw layer. Evaluation stops seamlessly. The trader agent never executes the action.
+
+### Scenario 3: Injection Attempt
+- **Action**: Click the "Attack Demo" button on the dashboard to input a malicious payload (e.g., `IGNORE PREVIOUS` overriding constraints).
+- **Expected Outcome**: Verify rejection by the Risk Agent and ArmorClaw. The interface flags the block with an `Injected_Payload_Detected` badge.
 
 ## Submission Document
 
