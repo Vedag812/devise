@@ -88,6 +88,22 @@ export function PipelineDashboard() {
         })
     }, [])
 
+    // Real-time stock price refresh every 30s
+    React.useEffect(() => {
+        const t = setInterval(() => {
+            fetchWithRetry(API.stocks).then(r => r.json()).then(d => {
+                const tickers = d.tickers || []
+                setStocks(tickers)
+                setMacroSignals(tickers.map((t: any) => ({
+                    ticker: t.ticker,
+                    priority: t.source === 'alpaca_live' ? 'HIGH' : 'MED',
+                    reasoning: `$${t.price?.toFixed(2)} | Vol: ${(t.volume / 1e6)?.toFixed(1)}M | ${t.source === 'alpaca_live' ? 'LIVE' : 'SIM'}`,
+                })))
+            }).catch(() => {})
+        }, 30000)
+        return () => clearInterval(t)
+    }, [])
+
     // Refresh portfolio after pipeline completes
     React.useEffect(() => {
         if (pipelineStatus === "EXECUTED") {
@@ -449,14 +465,20 @@ export function PipelineDashboard() {
                                                 />
                                                 <div className="flex flex-wrap gap-2">
                                                     {[
-                                                        { label: "NVDA Earnings", ticker: "NVDA", text: "NVIDIA Q4 2025 Results: Revenue $35.1B (+94% YoY), Data Center $27.1B, Gross Margin 76%. Beat EPS estimates by 12%. Jensen Huang: 'Blackwell production ramping, demand far exceeds supply.' Strong AI infrastructure spending across hyperscalers." },
-                                                        { label: "AAPL Revenue", ticker: "AAPL", text: "Apple Q1 2026 Results: Revenue $124.3B (record quarter), iPhone revenue +6% to $69.1B, Services revenue $26.3B (+14% YoY). Installed base exceeds 2.35 billion devices. Apple Intelligence driving strong upgrade cycle for iPhone 16 Pro models." },
-                                                        { label: "MSFT Cloud", ticker: "MSFT", text: "Microsoft Q2 FY2026: Intelligent Cloud revenue $25.5B (+19%), Azure growth 29%. Microsoft 365 Copilot adoption accelerating with 60% of Fortune 500 using paid licenses. GitHub Copilot exceeds 1.8M paid subscribers. Total revenue $65.6B." },
+                                                        { label: "NVDA Earnings", ticker: "NVDA", text: "NVIDIA Q4 2025 Results: Revenue $35.1B (+94% YoY), Data Center $27.1B, Gross Margin 76%. Beat EPS estimates by 12%. Jensen Huang: 'Blackwell production ramping, demand far exceeds supply.' Strong AI infrastructure spending across hyperscalers.", blocked: false },
+                                                        { label: "AAPL Revenue", ticker: "AAPL", text: "Apple Q1 2026 Results: Revenue $124.3B (record quarter), iPhone revenue +6% to $69.1B, Services revenue $26.3B (+14% YoY). Installed base exceeds 2.35 billion devices. Apple Intelligence driving strong upgrade cycle for iPhone 16 Pro models.", blocked: false },
+                                                        { label: "MSFT Cloud", ticker: "MSFT", text: "Microsoft Q2 FY2026: Intelligent Cloud revenue $25.5B (+19%), Azure growth 29%. Microsoft 365 Copilot adoption accelerating with 60% of Fortune 500 using paid licenses. GitHub Copilot exceeds 1.8M paid subscribers. Total revenue $65.6B.", blocked: false },
+                                                        { label: "⛔ TSLA (Blocked)", ticker: "TSLA", text: "Tesla Q4 2025: Revenue $25.2B (+8% YoY), automotive margins declining to 17.6%, Cybertruck deliveries ramping but below expectations. Elon Musk announces $10B AI training cluster investment. Full Self-Driving v13 rollout to all customers.", blocked: true },
                                                     ].map((s) => (
                                                         <button
                                                             key={s.label}
                                                             onClick={() => { setSeed(s.text); setSelectedTicker(s.ticker); }}
-                                                            className="px-3 py-1.5 border border-white/[0.06] text-[9px] font-bold text-white/25 uppercase tracking-wider hover:border-flame/30 hover:text-flame/60 transition-all"
+                                                            className={cn(
+                                                                "px-3 py-1.5 border text-[9px] font-bold uppercase tracking-wider transition-all",
+                                                                s.blocked
+                                                                    ? "border-red-500/20 text-red-400/40 hover:border-red-500/50 hover:text-red-400"
+                                                                    : "border-white/[0.06] text-white/25 hover:border-flame/30 hover:text-flame/60"
+                                                            )}
                                                         >
                                                             {s.label}
                                                         </button>

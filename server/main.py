@@ -395,12 +395,20 @@ async def health():
 
 @app.get("/v1/stocks")
 async def get_stocks():
-    """Get allowed ticker universe with REAL quotes."""
+    """Get ticker universe with REAL quotes. Includes restricted tickers for demo."""
     tickers = list(policy_engine.ticker_universe)
     stocks = []
     for t in sorted(tickers):
         quote = get_real_quote(t)
+        quote["policy_status"] = "allowed"
         stocks.append(quote)
+    # Add restricted tickers (outside policy universe) for demo
+    restricted = ["TSLA"]
+    for t in restricted:
+        if t not in tickers:
+            quote = get_real_quote(t)
+            quote["policy_status"] = "restricted"
+            stocks.append(quote)
     return {"tickers": stocks, "universe_size": len(tickers)}
 
 

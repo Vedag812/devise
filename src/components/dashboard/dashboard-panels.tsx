@@ -423,11 +423,12 @@ export function StockCards({ stocks, selectedTicker, onSelect, className }: Stoc
     if (stocks.length === 0) return null
 
     return (
-        <div className={cn("grid grid-cols-3 gap-2", className)}>
+        <div className={cn("grid grid-cols-2 sm:grid-cols-4 gap-2", className)}>
             {stocks.map((s, i) => {
                 const change = s.price && s.prev_close ? ((s.price - s.prev_close) / s.prev_close * 100) : 0
                 const isUp = change >= 0
                 const isSelected = selectedTicker === s.ticker
+                const isRestricted = s.policy_status === "restricted"
 
                 return (
                     <motion.button
@@ -438,16 +439,28 @@ export function StockCards({ stocks, selectedTicker, onSelect, className }: Stoc
                         onClick={() => onSelect(s.ticker)}
                         className={cn(
                             "border p-3 text-left transition-all relative overflow-hidden group",
-                            isSelected
+                            isRestricted && isSelected
+                                ? "border-red-500/40 bg-red-500/[0.05] shadow-[0_0_20px_rgba(239,68,68,0.08)]"
+                                : isSelected
                                 ? "border-flame/40 bg-flame/[0.05] shadow-[0_0_20px_rgba(254,127,45,0.08)]"
+                                : isRestricted
+                                ? "border-red-500/[0.15] bg-red-500/[0.02] hover:border-red-500/30"
                                 : "border-white/[0.06] bg-white/[0.01] hover:border-white/15"
                         )}
                     >
-                        {isSelected && (
+                        {isSelected && !isRestricted && (
                             <div className="absolute top-0 right-0 w-0 h-0 border-t-[16px] border-t-flame/40 border-l-[16px] border-l-transparent" />
                         )}
+                        {isRestricted && (
+                            <div className="absolute top-0 right-0 px-1 py-0.5 bg-red-500/20 text-red-400 text-[6px] font-black uppercase tracking-wider">
+                                BLOCKED
+                            </div>
+                        )}
                         <div className="flex items-center justify-between mb-1.5">
-                            <span className={cn("text-xs font-black uppercase", isSelected ? "text-flame" : "text-white/60")}>
+                            <span className={cn("text-xs font-black uppercase",
+                                isRestricted ? "text-red-400" :
+                                isSelected ? "text-flame" : "text-white/60"
+                            )}>
                                 {s.ticker}
                             </span>
                             <span className={cn("flex items-center gap-0.5 text-[8px] font-black px-1 py-0.5",
