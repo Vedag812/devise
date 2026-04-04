@@ -66,6 +66,7 @@ from enforcement.device_log import device_log as armorclaw_log
 from core.policy_handler import device_policy
 from core.security import issue_device_token as core_issue_token, verify_device_token as core_verify_token
 from openclaw_agent import OpenClawAgent, load_skills
+from services.mirofish_engine import run_mirofish_simulation
 
 # ── Policy Loader ────────────────────────────────────────────────────────
 POLICY_PATH = os.path.join(os.path.dirname(__file__), "..", "skills", "policy", "devise_policy.yaml")
@@ -121,73 +122,32 @@ else:
         print("⚠️  ARMORIQ_API_KEY not set — using local enforcement only")
 
 # ── Real Swarm Analyst (GPT-powered) ─────────────────────────────────────
-SECTOR_PERSONAS = [
-    ("Technology", "You are a technology sector analyst. Evaluate the stock based on tech trends, AI spending, chip demand, and innovation."),
-    ("Macro", "You are a macroeconomic analyst. Evaluate based on interest rates, GDP growth, inflation, and global economic outlook."),
-    ("SupplyChain", "You are a supply chain analyst. Evaluate based on manufacturing capacity, logistics, supplier health, and inventory levels."),
-    ("Institutional", "You are an institutional flow analyst. Evaluate based on hedge fund positioning, ETF inflows, and institutional buying patterns."),
-    ("Technical", "You are a technical chart analyst. Evaluate based on moving averages, RSI, MACD, support/resistance levels, and volume patterns."),
-    ("Earnings", "You are an earnings analyst. Evaluate based on revenue growth, EPS beats, margin expansion, and forward guidance."),
-]
-
+# ── MiroFish Swarm Intelligence Engine ────────────────────────────────────
+# Replaces static GPT personas with a simulation-driven intelligence layer.
+# Instead of "AI thinks", the "market behaves" through emergent multi-agent behavior.
 
 async def run_swarm_analysis(ticker: str, seed: str, price: float) -> dict:
-    """Run real GPT-powered multi-persona swarm analysis."""
-    if not OPENAI_KEY:
-        return _fallback_sector_analysis()
-
-    sectors = {}
-    try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            tasks = []
-            for name, persona in SECTOR_PERSONAS:
-                tasks.append(_call_gpt_persona(client, name, persona, ticker, seed, price))
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            for i, result in enumerate(results):
-                name = SECTOR_PERSONAS[i][0]
-                if isinstance(result, Exception):
-                    sectors[name] = {"verdict": "neutral", "confidence": 0.50, "reasoning": f"Analysis unavailable: {str(result)[:50]}"}
-                else:
-                    sectors[name] = result
-    except Exception:
-        return _fallback_sector_analysis()
-
-    return sectors
-
-
-async def _call_gpt_persona(client: httpx.AsyncClient, name: str, persona: str, ticker: str, seed: str, price: float) -> dict:
-    """Call OpenAI GPT for a single sector persona."""
-    resp = await client.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers={"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"},
-        json={
-            "model": "gpt-4o-mini",
-            "temperature": 0.3,
-            "max_tokens": 120,
-            "messages": [
-                {"role": "system", "content": persona + " Respond ONLY with valid JSON: {\"verdict\": \"bullish\"|\"bearish\"|\"neutral\", \"confidence\": 0.0-1.0, \"reasoning\": \"one sentence\"}. No markdown."},
-                {"role": "user", "content": f"Analyze {ticker} at ${price:.2f}. News: {seed[:500]}"}
-            ]
-        }
+    """Run MiroFish swarm intelligence simulation.
+    
+    Spawns 15 agents (5 types x 3 each), runs 5 simulation rounds where agents
+    observe, interact, and evolve beliefs. Returns emergent consensus.
+    """
+    result = await run_mirofish_simulation(
+        ticker=ticker,
+        news_seed=seed,
+        price=price,
+        openai_key=OPENAI_KEY,
+        num_rounds=5,
+        agents_per_type=3,
     )
-    resp.raise_for_status()
-    content = resp.json()["choices"][0]["message"]["content"].strip()
-    # Strip markdown fences if GPT wraps in ```json
-    if content.startswith("```"):
-        content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-    return json.loads(content)
 
+    # Log the simulation result
+    print(f"[MiroFish] {ticker}: {result.action} (sentiment={result.final_sentiment:.3f}, "
+          f"confidence={result.final_confidence:.3f}, volatility={result.final_volatility:.3f}, "
+          f"momentum={result.momentum:.3f}) — {result.num_agents} agents, "
+          f"{len(result.rounds)} rounds in {result.simulation_time_ms:.0f}ms")
 
-def _fallback_sector_analysis() -> dict:
-    """Fallback weighted scoring when OpenAI is unavailable."""
-    return {
-        "Technology": {"verdict": "bullish", "confidence": round(random.uniform(0.70, 0.90), 2), "reasoning": "Strong AI infrastructure demand"},
-        "Macro": {"verdict": "neutral", "confidence": round(random.uniform(0.50, 0.70), 2), "reasoning": "Mixed economic signals"},
-        "SupplyChain": {"verdict": "bullish", "confidence": round(random.uniform(0.65, 0.80), 2), "reasoning": "Production capacity expanding"},
-        "Institutional": {"verdict": "bullish", "confidence": round(random.uniform(0.70, 0.85), 2), "reasoning": "Net institutional buying"},
-        "Technical": {"verdict": "bullish", "confidence": round(random.uniform(0.60, 0.75), 2), "reasoning": "Above key moving averages"},
-        "Earnings": {"verdict": "bullish", "confidence": round(random.uniform(0.75, 0.90), 2), "reasoning": "Beat EPS estimates"},
-    }
+    return result.to_sector_analysis()
 
 # ── Audit Log ────────────────────────────────────────────────────────────
 audit_trail: List[Dict[str, Any]] = []
@@ -675,10 +635,10 @@ async def run_pipeline(req: PipelineRequest):
              reason=f"Got quote: ${quote['price']} (source: {quote['source']})",
              details=quote)
 
-    # Run real GPT-powered swarm analysis
+    # Run MiroFish swarm intelligence simulation
     sector_analysis = await run_swarm_analysis(req.ticker, req.reason, quote["price"])
-    log_audit("SWARM_ANALYSIS", "analyst_agent", "gpt_swarm", "PASS",
-             reason=f"Ran {len(sector_analysis)} sector personas via GPT" if OPENAI_KEY else "Fallback weighted scoring")
+    log_audit("SWARM_ANALYSIS", "analyst_agent", "mirofish_simulation", "PASS",
+             reason=f"MiroFish simulation: {len(sector_analysis)} agent types, 5 rounds of emergent behavior")
 
     analyst_result = {
         "stage": "SWARM_ANALYST",
@@ -692,7 +652,7 @@ async def run_pipeline(req: PipelineRequest):
             "reason": req.reason,
         },
         "sector_analysis": sector_analysis,
-        "analysis_source": "gpt-4o-mini" if OPENAI_KEY else "fallback_weighted",
+        "analysis_source": "mirofish_simulation",
     }
     results["stages"].append(analyst_result)
 
