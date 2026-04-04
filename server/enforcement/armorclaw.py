@@ -26,6 +26,7 @@ from core.security import verify_device_token
 # ── Prompt Injection Patterns ────────────────────────────────────────────
 INJECTION_PATTERNS = [
     r"(?i)ignore\s+(all\s+)?previous\s+instructions",
+    r"(?i)ignore\s+(all\s+)?instructions",
     r"(?i)ignore\s+above",
     r"(?i)bypass\s+(all\s+)?policy",
     r"(?i)bypass\s+(all\s+)?checks",
@@ -40,6 +41,9 @@ INJECTION_PATTERNS = [
     r"(?i)do\s+not\s+follow",
     r"(?i)immediately\s+place",
     r"(?i)execute\s+without\s+checking",
+    r"(?i)sell\s+everything",
+    r"(?i)dump\s+all\s+(shares|positions|holdings)",
+    r"(?i)liquidate\s+all",
 ]
 
 
