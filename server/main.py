@@ -40,7 +40,9 @@ from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 
-load_dotenv()
+load_dotenv()  # Try current dir first
+# Also load from project root (Ossome/.env) since server runs from server/
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"), override=True)
 
 # ── Alpaca SDK ───────────────────────────────────────────────────────────
 try:
