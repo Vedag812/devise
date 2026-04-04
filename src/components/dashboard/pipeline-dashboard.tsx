@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils"
 import { API, fetchWithRetry } from "@/lib/api"
 import { PortfolioMonitorPanel, EarningsResearchPanel, CompliancePanel } from "./agent-panels"
+import { MiroFishGraph } from "./mirofish-graph"
 
 type Phase = "IDLE"|"SWARM_ANALYST"|"RISK_AGENT"|"ARMORCLAW"|"DEVICE_POLICY"|"TRADER"|"COMPLETE"|"BLOCKED"
 type NStatus = "idle"|"processing"|"allowed"|"blocked"
@@ -472,7 +473,10 @@ export function PipelineDashboard() {
                         </div>
                     </div>
 
-                    {/* ── ROW 5: AGENT PANELS ── */}
+                    {/* ── ROW 5: MIROFISH ENTITY GRAPH ── */}
+                    <MiroFishGraph />
+
+                    {/* ── ROW 6: AGENT PANELS ── */}
                     <div className="grid grid-cols-3 gap-4">
                         <PortfolioMonitorPanel />
                         <EarningsResearchPanel ticker={selectedTicker} />
