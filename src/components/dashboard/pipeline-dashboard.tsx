@@ -5,8 +5,24 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
     Terminal, Activity, FileText, Waves, Shield, ShieldAlert,
     CheckCircle2, XCircle, AlertTriangle, Loader2, Play,
-    Skull, ArrowLeft
+    Skull, ArrowLeft, Users, Landmark, TrendingUp, BarChart3, Newspaper, Zap,
+    Brain
 } from "lucide-react"
+
+// MiroFish agent type icons + display config
+const MIROFISH_AGENTS: Record<string, { icon: React.ElementType; label: string; color: string }> = {
+    RetailTraders:  { icon: Users,       label: "Retail Traders",  color: "text-cyan-400" },
+    Institutional:  { icon: Landmark,    label: "Institutional",   color: "text-blue-400" },
+    HedgeFunds:     { icon: TrendingUp,  label: "Hedge Funds",     color: "text-purple-400" },
+    Analysts:       { icon: BarChart3,   label: "Analysts",        color: "text-amber-400" },
+    MediaSentiment: { icon: Newspaper,   label: "Media Sentiment", color: "text-rose-400" },
+    // Fallback for old-style keys
+    Technology:     { icon: Zap,         label: "Technology",      color: "text-cyan-400" },
+    Macro:          { icon: Landmark,    label: "Macro",           color: "text-blue-400" },
+    SupplyChain:    { icon: TrendingUp,  label: "Supply Chain",    color: "text-purple-400" },
+    Technical:      { icon: BarChart3,   label: "Technical",       color: "text-amber-400" },
+    Earnings:       { icon: Newspaper,   label: "Earnings",        color: "text-rose-400" },
+}
 import { cn } from "@/lib/utils"
 import { API, fetchWithRetry } from "@/lib/api"
 import { PipelineFlow } from "./pipeline-flow"
@@ -542,51 +558,70 @@ export function PipelineDashboard() {
                                     {/* Sector Results Grid */}
                                     {Object.keys(sectorResults).length > 0 && (
                                         <div>
-                                            <div className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                <Activity className="w-3 h-3 text-flame/50" /> Swarm_Sector_Analysis
+                                            <div className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                <Brain className="w-3.5 h-3.5 text-flame/70" />
+                                                <span>MiroFish_Agent_Simulation</span>
+                                                <span className="text-[7px] text-flame/40 ml-auto">15 agents · 5 rounds · emergent consensus</span>
                                             </div>
                                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                                {Object.entries(sectorResults).map(([sector, data], i) => (
+                                                {Object.entries(sectorResults).map(([sector, data], i) => {
+                                                    const agentMeta = MIROFISH_AGENTS[sector] || { icon: Activity, label: sector, color: "text-white/40" };
+                                                    const AgentIcon = agentMeta.icon;
+                                                    return (
                                                     <motion.div
                                                         key={sector}
                                                         initial={{ opacity: 0, y: 10 }}
                                                         animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ delay: i * 0.05 }}
+                                                        transition={{ delay: i * 0.08 }}
                                                         className={cn(
-                                                            "p-3 border bg-white/[0.01]",
+                                                            "p-3 border bg-white/[0.01] relative overflow-hidden",
                                                             data.verdict === "bullish" ? "border-emerald-500/20" :
                                                                 data.verdict === "bearish" ? "border-red-500/20" : "border-white/5"
                                                         )}
                                                     >
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <span className="text-[9px] font-black text-white/40 uppercase">{sector}</span>
+                                                        {/* Agent glow accent */}
+                                                        <div className={cn(
+                                                            "absolute top-0 left-0 w-0.5 h-full",
+                                                            data.verdict === "bullish" ? "bg-emerald-500/60" :
+                                                                data.verdict === "bearish" ? "bg-red-500/60" : "bg-white/10"
+                                                        )} />
+                                                        <div className="flex items-center gap-1.5 mb-1.5">
+                                                            <AgentIcon className={cn("w-3.5 h-3.5", agentMeta.color)} />
+                                                            <span className="text-[9px] font-black text-white/50 uppercase">{agentMeta.label}</span>
                                                             <span className={cn(
-                                                                "text-[8px] font-black uppercase px-1.5 py-0.5",
-                                                                data.verdict === "bullish" ? "text-emerald-400 bg-emerald-500/10" :
-                                                                    data.verdict === "bearish" ? "text-red-400 bg-red-500/10" : "text-white/30 bg-white/5"
+                                                                "text-[7px] font-black uppercase px-1.5 py-0.5 ml-auto",
+                                                                data.verdict === "bullish" ? "text-emerald-400 bg-emerald-500/10 shadow-[0_0_6px_rgba(16,185,129,0.15)]" :
+                                                                    data.verdict === "bearish" ? "text-red-400 bg-red-500/10 shadow-[0_0_6px_rgba(239,68,68,0.15)]" : "text-white/30 bg-white/5"
                                                             )}>
                                                                 {data.verdict}
                                                             </span>
                                                         </div>
-                                                        <div className="flex items-center gap-2 mb-1.5">
-                                                            <div className="flex-1 h-1 bg-white/5 overflow-hidden">
+                                                        {/* Confidence bar with gradient */}
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <div className="flex-1 h-1.5 bg-white/5 overflow-hidden rounded-full">
                                                                 <motion.div
                                                                     initial={{ width: 0 }}
                                                                     animate={{ width: `${data.confidence * 100}%` }}
+                                                                    transition={{ duration: 0.8, ease: "easeOut" }}
                                                                     className={cn(
-                                                                        "h-full",
-                                                                        data.verdict === "bullish" ? "bg-emerald-500" :
-                                                                            data.verdict === "bearish" ? "bg-red-500" : "bg-white/20"
+                                                                        "h-full rounded-full",
+                                                                        data.verdict === "bullish" ? "bg-gradient-to-r from-emerald-600 to-emerald-400" :
+                                                                            data.verdict === "bearish" ? "bg-gradient-to-r from-red-600 to-red-400" : "bg-white/20"
                                                                     )}
                                                                 />
                                                             </div>
-                                                            <span className="text-[9px] font-black text-white/30">
+                                                            <span className="text-[9px] font-bold text-white/40 tabular-nums">
                                                                 {(data.confidence * 100).toFixed(0)}%
                                                             </span>
                                                         </div>
-                                                        <p className="text-[8px] text-white/20 leading-relaxed line-clamp-2">{data.reasoning}</p>
+                                                        {/* Weight indicator */}
+                                                        {data.weight && (
+                                                            <div className="text-[7px] text-white/15 mb-0.5">Influence: {(data.weight * 100).toFixed(0)}%</div>
+                                                        )}
+                                                        <p className="text-[7px] text-white/20 leading-relaxed line-clamp-2">{data.reasoning}</p>
                                                     </motion.div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     )}
@@ -599,7 +634,7 @@ export function PipelineDashboard() {
                                             className="p-4 border border-flame/20 bg-flame/[0.03]"
                                         >
                                             <div className="flex items-center justify-between mb-2">
-                                                <div className="text-[9px] font-black text-flame/60 uppercase tracking-widest">Swarm_Consensus</div>
+                                                <div className="text-[9px] font-black text-flame/60 uppercase tracking-widest flex items-center gap-1.5"><Brain className="w-3 h-3" /> MiroFish_Consensus</div>
                                                 <div className={cn(
                                                     "text-lg font-black",
                                                     recommendation.action === "BUY" ? "text-emerald-400" : "text-white/40"

@@ -16,7 +16,7 @@ interface PipelineFlowProps {
 }
 
 const NODES = [
-    { id: "SWARM_ANALYST", label: "SWARM", sub: "6-Persona Analysis", icon: Brain, color: "blue" },
+    { id: "SWARM_ANALYST", label: "MIROFISH", sub: "Simulation Engine", icon: Brain, color: "blue" },
     { id: "RISK_AGENT", label: "RISK", sub: "Portfolio Validation", icon: FileKey2, color: "purple" },
     { id: "ARMORCLAW", label: "ARMORCLAW", sub: "Intent Enforcement", icon: ShieldCheck, color: "flame" },
     { id: "TRADER", label: "TRADER", sub: "Paper Execution", icon: Rocket, color: "green" },
