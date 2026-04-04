@@ -56,9 +56,13 @@ try:
 except ImportError:
     ARMORIQ_AVAILABLE = False
 
-# ── DeviceGuard (per-agent scope enforcement) ────────────────────────────
+# ── Full Enforcement Stack ───────────────────────────────────────────────
 sys.path.insert(0, os.path.dirname(__file__))
 from enforcement.device_guard import check_scope, get_agent_scope, list_all_scopes
+from enforcement.armorclaw import enforce as armorclaw_enforce, scan_for_injection
+from enforcement.device_log import device_log as armorclaw_log
+from core.policy_handler import device_policy
+from core.security import issue_device_token as core_issue_token, verify_device_token as core_verify_token
 
 # ── Policy Loader ────────────────────────────────────────────────────────
 POLICY_PATH = os.path.join(os.path.dirname(__file__), "..", "skills", "policy", "devise_policy.yaml")
@@ -682,30 +686,55 @@ async def run_pipeline(req: PipelineRequest):
     results["stages"].append(risk_result)
 
     # ── Stage 3: ArmorClaw Intent Enforcement ────────────────────────────
-    # 3a. DeviceGuard: per-agent scope check
-    scope_ok, scope_err = check_scope("analyst", "market_data_fetch")
-    log_audit("DEVICE_GUARD", "armorclaw", "scope_check_analyst", "PASS" if scope_ok else "BLOCK",
-             scope_err or "Analyst scope verified")
+    # 3a. Run the full ArmorClaw enforcement pipeline (5 checks)
+    #     DeviceGuard → DevicePolicy → Injection Scan → DeviceToken → Intent Plan
+    enforcement = armorclaw_enforce(
+        agent_role="analyst",
+        tool_name="market_data_fetch",
+        params={"ticker": req.ticker, "reason": req.reason},
+    )
+    log_audit("ARMORCLAW_ENFORCE", "armorclaw", "analyst_scope_check", 
+             "PASS" if enforcement.allowed else "BLOCK",
+             reason=f"ArmorClaw enforce: {len(enforcement.checks)} checks run",
+             details=enforcement.to_dict())
 
-    scope_ok, scope_err = check_scope("trader", "order_place")
-    log_audit("DEVICE_GUARD", "armorclaw", "scope_check_trader", "PASS" if scope_ok else "BLOCK",
-             scope_err or "Trader scope verified")
+    # 3b. Now enforce trader scope separately
+    trader_enforcement = armorclaw_enforce(
+        agent_role="trader",
+        tool_name="order_place",
+        params={"ticker": req.ticker, "quantity": req.quantity, "side": req.action, "reason": req.reason},
+    )
+    log_audit("ARMORCLAW_ENFORCE", "armorclaw", "trader_scope_check",
+             "PASS" if trader_enforcement.allowed else "BLOCK",
+             reason=f"Trader enforcement: {'allowed' if trader_enforcement.allowed else trader_enforcement.block_reason}",
+             details=trader_enforcement.to_dict())
 
-    # 3b. Check tool access via policy engine
-    ok, reason = policy_engine.validate_tool_access("trader_agent", "order_place")
-    log_audit("ARMORCLAW_CHECK", "armorclaw", "tool_access", "PASS" if ok else "BLOCK", reason)
+    # 3c. Scan for injection using ArmorClaw's own scanner
+    is_clean, injection_detail = scan_for_injection(req.reason)
+    if not is_clean:
+        armorclaw_result = {
+            "stage": "ARMORCLAW",
+            "status": "BLOCKED",
+            "reason": injection_detail,
+            "enforcement_checks": enforcement.to_dict()["checks"] + trader_enforcement.to_dict()["checks"],
+        }
+        results["stages"].append(armorclaw_result)
+        results["final_status"] = "BLOCKED"
+        log_audit("INJECTION_BLOCKED", "armorclaw", "injection_scan", "BLOCK", injection_detail)
+        return results
 
-    # 3c. Scan for injection in reason text
+    # Also check via inline policy engine (dual-layer injection defense)
     injected, reason = policy_engine.scan_injection(req.reason)
     if injected:
         armorclaw_result = {
             "stage": "ARMORCLAW",
             "status": "BLOCKED",
             "reason": reason,
+            "enforcement_checks": enforcement.to_dict()["checks"],
         }
         results["stages"].append(armorclaw_result)
         results["final_status"] = "BLOCKED"
-        log_audit("INJECTION_BLOCKED", "armorclaw", "injection_scan", "BLOCK", reason)
+        log_audit("INJECTION_BLOCKED", "armorclaw", "policy_injection_scan", "BLOCK", reason)
         return results
 
     # 3d. ArmorIQ SDK: capture plan + get intent token (if available)
@@ -727,16 +756,27 @@ async def run_pipeline(req: PipelineRequest):
             )
             armoriq_token = armoriq_client.get_intent_token(plan_capture)
             log_audit("ARMORIQ_VERIFY", "armorclaw", "armoriq_intent_token", "PASS",
-                     reason=f"ArmorIQ intent token issued for {req.ticker}",
-                     details={"armoriq_plan_id": str(plan_capture) if plan_capture else "unknown"})
+                     reason=f"ArmorIQ intent token issued for {req.ticker}")
         except Exception as e:
             log_audit("ARMORIQ_VERIFY", "armorclaw", "armoriq_intent_token", "WARN",
-                     reason=f"ArmorIQ SDK call failed, falling back to local enforcement: {str(e)[:100]}")
+                     reason=f"ArmorIQ fallback to local enforcement: {str(e)[:100]}")
     else:
         log_audit("ARMORIQ_VERIFY", "armorclaw", "armoriq_intent_token", "SKIP",
                  reason="ArmorIQ SDK not configured — using DeviceToken + DeviceGuard only")
 
-    # 3e. Issue DeviceToken (local HMAC)
+    # 3e. Issue DeviceToken via core.security (HMAC-SHA256 with replay protection)
+    core_token = core_issue_token(
+        issued_to="trader-agent",
+        ticker=req.ticker,
+        side=req.action,
+        max_quantity=req.quantity,
+        ttl_minutes=2,
+    )
+    log_audit("TOKEN_ISSUED", "risk_agent", "core_security_token", "PASS",
+             reason=f"Core DeviceToken {core_token['token_id'][:8]} issued for {req.ticker}",
+             details={"token_id": core_token["token_id"], "ticker": core_token["ticker"]})
+
+    # Also issue the pipeline-level token (backward compatible)
     token = issue_device_token(
         issuer="risk-agent",
         delegatee="trader-agent",
@@ -748,16 +788,19 @@ async def run_pipeline(req: PipelineRequest):
         }
     )
     log_audit("TOKEN_ISSUED", "risk_agent", "delegation_token_issue", "PASS",
-             reason=f"Token {token['id']} issued for {req.ticker}",
+             reason=f"Pipeline token {token['id']} issued for {req.ticker}",
              details={"token_id": token["id"], "scope": token["scope"]})
 
     armorclaw_result = {
         "stage": "ARMORCLAW",
         "status": "PASS",
         "token": token,
+        "core_token_id": core_token["token_id"][:8],
         "intent_verified": True,
         "armoriq_token": armoriq_token is not None,
+        "enforcement_checks": enforcement.to_dict()["checks"] + trader_enforcement.to_dict()["checks"],
         "device_guard_scopes": list_all_scopes(),
+        "device_log_trail": armorclaw_log.get_recent(5),
     }
     results["stages"].append(armorclaw_result)
 
