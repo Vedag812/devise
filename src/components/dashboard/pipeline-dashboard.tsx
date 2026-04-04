@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { API, fetchWithRetry } from "@/lib/api"
+import { PortfolioMonitorPanel, EarningsResearchPanel, CompliancePanel } from "./agent-panels"
 
 type Phase = "IDLE"|"SWARM_ANALYST"|"RISK_AGENT"|"ARMORCLAW"|"DEVICE_POLICY"|"TRADER"|"COMPLETE"|"BLOCKED"
 type NStatus = "idle"|"processing"|"allowed"|"blocked"
@@ -43,7 +44,8 @@ const NAV_ITEMS = [
     {icon:Shield,label:"ArmorClaw"},
     {icon:Bot,label:"OpenClaw"},
     {icon:Wallet,label:"Portfolio"},
-    {icon:ScrollText,label:"Audit Log"},
+    {icon:FileText,label:"Earnings"},
+    {icon:ScrollText,label:"Compliance"},
 ]
 
 export function PipelineDashboard() {
@@ -468,6 +470,13 @@ export function PipelineDashboard() {
                                 {orders.length===0&&<div className="text-center text-gray-300 text-xs py-4">No orders yet</div>}
                             </div>
                         </div>
+                    </div>
+
+                    {/* ── ROW 5: AGENT PANELS ── */}
+                    <div className="grid grid-cols-3 gap-4">
+                        <PortfolioMonitorPanel />
+                        <EarningsResearchPanel ticker={selectedTicker} />
+                        <CompliancePanel />
                     </div>
 
                     {/* Attack blocks */}

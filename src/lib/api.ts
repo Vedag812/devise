@@ -13,6 +13,11 @@ export const API = {
     stats: `${API_BASE}/v1/stats`,
     pipelineRun: `${API_BASE}/v1/pipeline/run`,
     pipelineAttack: `${API_BASE}/v1/pipeline/attack`,
+    portfolioMonitor: `${API_BASE}/v1/agent/portfolio-monitor`,
+    earningsResearch: (ticker: string) => `${API_BASE}/v1/agent/earnings-research/${ticker}`,
+    compliance: `${API_BASE}/v1/compliance`,
+    tradeLog: `${API_BASE}/v1/trade-log`,
+    scopes: `${API_BASE}/v1/scopes`,
 }
 
 // Retry wrapper for Render cold starts (free tier wakes up in ~30s)
