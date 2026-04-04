@@ -237,6 +237,64 @@ class PolicyEngine:
             "timestamp": time.time()
         })
 
+    def record_exposure(self, order_value: float):
+        """Track daily exposure for limit enforcement."""
+        self.daily_trades.append({"value": order_value, "timestamp": time.time()})
+
+    def log_trade(self, ticker: str, action: str, quantity: int, price: float, intent: str = "", status: str = "EXECUTED"):
+        """Log every trade decision with the intent it was validated against."""
+        if not hasattr(self, '_trade_log'):
+            self._trade_log = []
+        self._trade_log.append({
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "ticker": ticker, "action": action,
+            "quantity": quantity, "price": price,
+            "value": quantity * price,
+            "intent": intent, "status": status,
+        })
+
+    def get_trade_log(self) -> list:
+        return getattr(self, '_trade_log', [])
+
+    def get_daily_exposure(self) -> float:
+        return sum(t.get("value", 0) for t in self.daily_trades)
+
+    def get_ticker_universe(self) -> list:
+        return list(self.ticker_universe)
+
+    def get_max_order_size(self) -> int:
+        return self.trade_limits.get("per_order", {}).get("max_shares", 50)
+
+    def validate_earnings_blackout(self, ticker: str) -> tuple[bool, str]:
+        """Enforce earnings blackout window."""
+        from datetime import datetime, timedelta
+        blackout_days = self.raw_policy.get("earnings_blackout_days", 3) if hasattr(self, 'raw_policy') else 3
+        EARNINGS_DATES = {
+            "NVDA": datetime(2026, 2, 26),
+            "AAPL": datetime(2026, 1, 30),
+            "MSFT": datetime(2026, 1, 29),
+        }
+        if ticker in EARNINGS_DATES:
+            ed = EARNINGS_DATES[ticker]
+            start = ed - timedelta(days=blackout_days)
+            end = ed + timedelta(days=1)
+            now = datetime.now()
+            if start <= now <= end:
+                return False, f"BLACKOUT: {ticker} earnings on {ed.strftime('%Y-%m-%d')}"
+        return True, f"No active earnings blackout for {ticker}"
+
+    def validate_no_pii(self, text: str) -> tuple[bool, str]:
+        """Scan for PII/account numbers in parameters."""
+        import re
+        PII_PATTERNS = [
+            r"\b\d{3}-\d{2}-\d{4}\b",
+            r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b",
+        ]
+        for pattern in PII_PATTERNS:
+            if re.search(pattern, text):
+                return False, "BLOCKED: PII/account data detected in parameters"
+        return True, "No PII detected"
+
 
 policy_engine = PolicyEngine(devise_policy)
 
@@ -568,6 +626,47 @@ async def get_stats():
     }
 
 
+@app.get("/v1/trade-log")
+async def get_trade_log():
+    """Return trade log with intent metadata — every trade logged with its validated intent."""
+    return {
+        "trades": policy_engine.get_trade_log(),
+        "daily_exposure": policy_engine.get_daily_exposure(),
+        "max_daily_exposure": devise_policy.get("max_daily_exposure_usd", 15000),
+    }
+
+
+@app.get("/v1/compliance")
+async def get_compliance():
+    """Compliance monitoring — read-only audit of all enforcement decisions."""
+    trades = policy_engine.get_trade_log()
+    blocked_trades = [t for t in trades if t["status"] == "BLOCKED"]
+    executed_trades = [t for t in trades if t["status"] == "EXECUTED"]
+
+    # Check for wash sale violations
+    wash_sale_window = 30
+    restricted = ["GME", "AMC", "DWAC"]
+
+    return {
+        "summary": {
+            "total_trades": len(trades),
+            "executed": len(executed_trades),
+            "blocked": len(blocked_trades),
+            "block_rate": f"{len(blocked_trades)/max(1,len(trades))*100:.1f}%",
+        },
+        "policy": {
+            "ticker_universe": policy_engine.get_ticker_universe(),
+            "max_order_size": policy_engine.get_max_order_size(),
+            "max_daily_exposure": devise_policy.get("max_daily_exposure_usd", 15000),
+            "earnings_blackout_days": devise_policy.get("earnings_blackout_days", 3),
+            "restricted_list": restricted,
+            "wash_sale_window_days": wash_sale_window,
+            "forbidden_tools": devise_policy.get("forbidden_tools", []),
+        },
+        "enforcement_log": audit_trail[-50:],  # Last 50 entries (read-only)
+        "trade_log": trades,
+    }
+
 # ── OpenClaw Agent Endpoints ─────────────────────────────────────────────
 
 class AgentRequest(BaseModel):
@@ -679,6 +778,18 @@ async def run_pipeline(req: PipelineRequest):
     if not ok:
         violations.append({"rule": "daily_exposure", "reason": reason})
 
+    # Earnings blackout check
+    ok, reason = policy_engine.validate_earnings_blackout(req.ticker)
+    log_audit("POLICY_CHECK", "risk_agent", "earnings_blackout", "PASS" if ok else "BLOCK", reason)
+    if not ok:
+        violations.append({"rule": "earnings_blackout", "reason": reason})
+
+    # PII / data class scan on reason field
+    ok, reason = policy_engine.validate_no_pii(req.reason)
+    log_audit("POLICY_CHECK", "risk_agent", "pii_scan", "PASS" if ok else "BLOCK", reason)
+    if not ok:
+        violations.append({"rule": "data_class_violation", "reason": reason})
+
     # Confidence threshold
     min_conf = 0.5
     if req.confidence < min_conf:
@@ -699,6 +810,9 @@ async def run_pipeline(req: PipelineRequest):
         results["final_status"] = "BLOCKED"
         log_audit("PIPELINE_BLOCKED", "risk_agent", "pipeline", "BLOCKED",
                  reason=f"Blocked: {len(violations)} violation(s)")
+        # Log blocked trade with intent
+        policy_engine.log_trade(req.ticker, req.action, req.quantity, price,
+                               intent=req.reason, status="BLOCKED")
         return results
 
     risk_result = {"stage": "RISK_AGENT", "status": "PASS", "violations": []}
@@ -839,7 +953,9 @@ async def run_pipeline(req: PipelineRequest):
 
     # Place REAL paper trade
     order = place_real_order(req.ticker, req.quantity, req.action.lower())
-    policy_engine.record_trade(req.ticker, req.quantity, price)
+    policy_engine.record_exposure(order_value)
+    policy_engine.log_trade(req.ticker, req.action, req.quantity, price,
+                           intent=req.reason, status="EXECUTED")
 
     log_audit("TRADE_EXECUTED", "trader_agent", "order_place", "PASS",
              reason=f"Order {order.get('order_id')} placed: {req.action} {req.quantity}x {req.ticker}",

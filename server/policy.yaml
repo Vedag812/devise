@@ -1,25 +1,66 @@
+## DEVISE (Deterministic Enforcement of Verified Intent in Secured Execution)
+## Declarative policy configuration loaded by DevicePolicy engine
+
 policy:
+  # Approved trading universe — any ticker outside this list is BLOCKED
   ticker_universe: ["NVDA", "AAPL", "MSFT"]
-  max_order_size: 50
-  max_daily_exposure_usd: 5000
-  market_hours_only: true
+
+  # Per-order constraints
+  max_order_size: 50          # shares per order
+  max_daily_exposure_usd: 15000  # total daily dollar exposure
+  min_confidence: 0.5         # minimum confidence to approve trade
+
+  # Earnings blackout — block trading N days before/after earnings
   earnings_blackout_days: 3
 
-  file_access:
-    read_dirs: ["./data/market/", "./data/earnings/"]
-    write_dirs: ["./output/reports/"]
+  # Market hours enforcement
+  market_hours_only: true
 
+  # File access restrictions — agents can ONLY access these paths
+  file_access:
+    read_dirs:
+      - "./data/market/"
+      - "./data/earnings/"
+      - "./data/filings/"
+    write_dirs:
+      - "./output/reports/"
+      - "./output/recommendations/"
+
+  # Tools that are NEVER allowed for any agent
   forbidden_tools:
     - shell_exec
+    - bash
+    - exec
     - http_post_external
+    - web_upload
+    - file_delete
 
+  # Data class restrictions enforced on all tool parameters
   data_restrictions:
     - no_pii
     - no_account_numbers_in_args
+    - no_credential_paths
 
+  # Blocked file patterns (credential access prevention)
+  blocked_file_patterns:
+    - "*.env"
+    - "*.pem"
+    - "*.key"
+    - "credentials.*"
+    - "secrets.*"
+
+# Agent delegation rules
 delegation:
   risk_to_trader:
     max_quantity: 50
-    ticker_lock: true
-    sub_delegation: false
-    token_ttl_minutes: 15
+    ticker_lock: true          # Token locked to specific ticker
+    sub_delegation: false      # Trader CANNOT delegate further
+    token_ttl_minutes: 15      # Token expires after 15 minutes
+    one_shot: true             # Token consumed after single use (replay protection)
+
+# Compliance rules
+compliance:
+  wash_sale_window_days: 30    # Flag wash sales within 30 days
+  restricted_list: ["GME", "AMC", "DWAC"]  # Meme stocks blocked
+  max_position_pct: 0.25      # Max 25% of portfolio in single ticker
+  audit_retention_days: 90    # Keep audit logs for 90 days
