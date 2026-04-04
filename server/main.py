@@ -416,20 +416,22 @@ app.add_middleware(
 
 
 # ── Keepalive (prevents Render free tier spin-down) ──────────────────────
-import urllib.request
 
 async def keepalive_ping():
-    """Self-ping every 10 minutes to prevent Render from sleeping."""
-    render_url = os.getenv("RENDER_EXTERNAL_URL", "")
-    if not render_url:
-        return  # Only runs on Render, not locally
+    """Self-ping every 5 minutes to prevent Render from sleeping."""
+    render_url = os.getenv("RENDER_EXTERNAL_URL", "https://devise-backend.onrender.com")
+    if not render_url or "localhost" in render_url:
+        print("[keepalive] Skipping — running locally")
+        return
+    print(f"[keepalive] Started — pinging {render_url} every 5 minutes")
     while True:
-        await asyncio.sleep(600)  # 10 minutes
+        await asyncio.sleep(300)  # 5 minutes
         try:
-            urllib.request.urlopen(f"{render_url}/", timeout=10)
-            print(f"[keepalive] pinged {render_url}")
-        except Exception:
-            pass
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(f"{render_url}/")
+                print(f"[keepalive] Pinged {render_url} — {resp.status_code}")
+        except Exception as e:
+            print(f"[keepalive] Ping failed: {e}")
 
 @app.on_event("startup")
 async def start_keepalive():
