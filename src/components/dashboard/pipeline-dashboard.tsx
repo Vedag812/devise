@@ -1,14 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import {
     Terminal, Activity, FileText, Shield, ShieldAlert,
     CheckCircle2, XCircle, Loader2, Play,
     Skull, Users, Landmark, TrendingUp, BarChart3,
     Newspaper, Brain, Zap, Send, LayoutDashboard,
     Eye, Bot, Wallet, ScrollText, Settings,
-    RefreshCw, Search, ChevronRight, ArrowUpRight, ArrowDownRight
+    RefreshCw, Search, ChevronRight, ArrowUpRight
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { API, fetchWithRetry } from "@/lib/api"
@@ -54,17 +54,17 @@ export function PipelineDashboard() {
     const [auditLog,setAuditLog]=React.useState<AuditEntry[]>([])
     const [sectorResults,setSectorResults]=React.useState<Record<string,any>>({})
     const [recommendation,setRecommendation]=React.useState<any>(null)
-    const [token,setToken]=React.useState<any>(null)
+    const [_token,setToken]=React.useState<any>(null)
     const [tradeResult,setTradeResult]=React.useState<any>(null)
     const [pipelineStatus,setPipelineStatus]=React.useState("")
     const [statusLabel,setStatusLabel]=React.useState("")
     const [attackBlocks,setAttackBlocks]=React.useState<any[]>([])
-    const [poisonedPayload,setPoisonedPayload]=React.useState<any>(null)
+    const [_poisonedPayload,setPoisonedPayload]=React.useState<any>(null)
     const [isRunning,setIsRunning]=React.useState(false)
     const [seed,setSeed]=React.useState("")
     const [selectedTicker,setSelectedTicker]=React.useState("NVDA")
     const [stocks,setStocks]=React.useState<any[]>([])
-    const [violatedRules,setViolatedRules]=React.useState<string[]>([])
+    const [_violatedRules,setViolatedRules]=React.useState<string[]>([])
     const [portfolio,setPortfolio]=React.useState<any>(null)
     const [orders,setOrders]=React.useState<any[]>([])
     const [agentInput,setAgentInput]=React.useState("")
