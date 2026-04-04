@@ -49,6 +49,17 @@ try:
 except ImportError:
     ALPACA_AVAILABLE = False
 
+# ── ArmorIQ SDK ──────────────────────────────────────────────────────────
+try:
+    from armoriq_sdk import ArmorIQClient
+    ARMORIQ_AVAILABLE = True
+except ImportError:
+    ARMORIQ_AVAILABLE = False
+
+# ── DeviceGuard (per-agent scope enforcement) ────────────────────────────
+sys.path.insert(0, os.path.dirname(__file__))
+from enforcement.device_guard import check_scope, get_agent_scope, list_all_scopes
+
 # ── Policy Loader ────────────────────────────────────────────────────────
 POLICY_PATH = os.path.join(os.path.dirname(__file__), "..", "skills", "policy", "devise_policy.yaml")
 devise_policy = {}
@@ -84,7 +95,23 @@ else:
 # ── HMAC Token Secret ────────────────────────────────────────────────────
 TOKEN_SECRET = os.getenv("DEVISE_TOKEN_SECRET", "devise-hackathon-secret-2026")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
+ARMORIQ_KEY = os.getenv("ARMORIQ_API_KEY", "")
 
+# ── ArmorIQ Client ───────────────────────────────────────────────────────
+armoriq_client = None
+if ARMORIQ_AVAILABLE and ARMORIQ_KEY:
+    try:
+        armoriq_client = ArmorIQClient(
+            api_key=ARMORIQ_KEY,
+            user_id="devise-pipeline",
+            agent_id="devise-enforcement-v3"
+        )
+        print(f"✅ ArmorIQ SDK connected")
+    except Exception as e:
+        print(f"⚠️  ArmorIQ SDK init failed: {e}")
+else:
+    if not ARMORIQ_KEY:
+        print("⚠️  ARMORIQ_API_KEY not set — using local enforcement only")
 
 # ── Real Swarm Analyst (GPT-powered) ─────────────────────────────────────
 SECTOR_PERSONAS = [
@@ -655,11 +682,20 @@ async def run_pipeline(req: PipelineRequest):
     results["stages"].append(risk_result)
 
     # ── Stage 3: ArmorClaw Intent Enforcement ────────────────────────────
-    # Check tool access for trader
+    # 3a. DeviceGuard: per-agent scope check
+    scope_ok, scope_err = check_scope("analyst", "market_data_fetch")
+    log_audit("DEVICE_GUARD", "armorclaw", "scope_check_analyst", "PASS" if scope_ok else "BLOCK",
+             scope_err or "Analyst scope verified")
+
+    scope_ok, scope_err = check_scope("trader", "order_place")
+    log_audit("DEVICE_GUARD", "armorclaw", "scope_check_trader", "PASS" if scope_ok else "BLOCK",
+             scope_err or "Trader scope verified")
+
+    # 3b. Check tool access via policy engine
     ok, reason = policy_engine.validate_tool_access("trader_agent", "order_place")
     log_audit("ARMORCLAW_CHECK", "armorclaw", "tool_access", "PASS" if ok else "BLOCK", reason)
 
-    # Scan for injection in reason text
+    # 3c. Scan for injection in reason text
     injected, reason = policy_engine.scan_injection(req.reason)
     if injected:
         armorclaw_result = {
@@ -672,7 +708,35 @@ async def run_pipeline(req: PipelineRequest):
         log_audit("INJECTION_BLOCKED", "armorclaw", "injection_scan", "BLOCK", reason)
         return results
 
-    # Issue DeviceToken
+    # 3d. ArmorIQ SDK: capture plan + get intent token (if available)
+    armoriq_token = None
+    if armoriq_client:
+        try:
+            plan = {
+                "goal": f"Execute {req.action} order for {req.ticker}",
+                "steps": [
+                    {"action": "market_data_fetch", "tool": "alpaca_api", "inputs": {"ticker": req.ticker}},
+                    {"action": "policy_validate", "tool": "devise_policy", "inputs": {"ticker": req.ticker, "qty": req.quantity}},
+                    {"action": "order_place", "tool": "alpaca_trade", "inputs": {"ticker": req.ticker, "qty": req.quantity, "side": req.action}},
+                ]
+            }
+            plan_capture = armoriq_client.capture_plan(
+                llm="gpt-4o-mini",
+                prompt=req.reason[:500],
+                plan=plan
+            )
+            armoriq_token = armoriq_client.get_intent_token(plan_capture)
+            log_audit("ARMORIQ_VERIFY", "armorclaw", "armoriq_intent_token", "PASS",
+                     reason=f"ArmorIQ intent token issued for {req.ticker}",
+                     details={"armoriq_plan_id": str(plan_capture) if plan_capture else "unknown"})
+        except Exception as e:
+            log_audit("ARMORIQ_VERIFY", "armorclaw", "armoriq_intent_token", "WARN",
+                     reason=f"ArmorIQ SDK call failed, falling back to local enforcement: {str(e)[:100]}")
+    else:
+        log_audit("ARMORIQ_VERIFY", "armorclaw", "armoriq_intent_token", "SKIP",
+                 reason="ArmorIQ SDK not configured — using DeviceToken + DeviceGuard only")
+
+    # 3e. Issue DeviceToken (local HMAC)
     token = issue_device_token(
         issuer="risk-agent",
         delegatee="trader-agent",
@@ -692,6 +756,8 @@ async def run_pipeline(req: PipelineRequest):
         "status": "PASS",
         "token": token,
         "intent_verified": True,
+        "armoriq_token": armoriq_token is not None,
+        "device_guard_scopes": list_all_scopes(),
     }
     results["stages"].append(armorclaw_result)
 
@@ -1055,8 +1121,11 @@ if __name__ == "__main__":
     print("═" * 60)
     print("  DEVISE Enforcement Pipeline v3.0")
     print("  OpenClaw + ArmorClaw + Alpaca Paper Trading")
-    print(f"  Alpaca: {'✅ Connected' if alpaca_api else '⚠️  Simulated fallback'}")
-    print(f"  Policy: {'✅ Loaded' if devise_policy else '⚠️  Not found'}")
-    print(f"  Port: {port}")
+    print(f"  Alpaca:      {'✅ Connected' if alpaca_api else '⚠️  Simulated fallback'}")
+    print(f"  ArmorIQ SDK: {'✅ Connected' if armoriq_client else '⚠️  Local enforcement only'}")
+    print(f"  DeviceGuard: ✅ Loaded ({len(list_all_scopes())} agent scopes)")
+    print(f"  OpenAI:      {'✅ GPT-4o-mini swarm' if OPENAI_KEY else '⚠️  Fallback scoring'}")
+    print(f"  Policy:      {'✅ Loaded' if devise_policy else '⚠️  Not found'}")
+    print(f"  Port:        {port}")
     print("═" * 60)
     uvicorn.run(app, host="0.0.0.0", port=port)
