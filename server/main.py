@@ -63,6 +63,7 @@ from enforcement.armorclaw import enforce as armorclaw_enforce, scan_for_injecti
 from enforcement.device_log import device_log as armorclaw_log
 from core.policy_handler import device_policy
 from core.security import issue_device_token as core_issue_token, verify_device_token as core_verify_token
+from openclaw_agent import OpenClawAgent, load_skills
 
 # ── Policy Loader ────────────────────────────────────────────────────────
 POLICY_PATH = os.path.join(os.path.dirname(__file__), "..", "skills", "policy", "devise_policy.yaml")
@@ -446,6 +447,15 @@ app.add_middleware(
 )
 
 
+# ── OpenClaw Autonomous Agent ────────────────────────────────────────────
+SKILLS_DIR = os.path.join(os.path.dirname(__file__), "..", "skills")
+openclaw_agent = OpenClawAgent(
+    openai_key=OPENAI_KEY,
+    skills_dir=SKILLS_DIR,
+    alpaca_api=alpaca_api,
+)
+print(f"✅ OpenClaw Agent initialized with {len(openclaw_agent.skills)} skills")
+
 # ── Keepalive (prevents Render free tier spin-down) ──────────────────────
 
 async def keepalive_ping():
@@ -593,6 +603,53 @@ async def get_stats():
         "tokens_issued": tokens,
         "policy_rules": len(devise_policy.get("ticker_universe", [])) + len(devise_policy.get("trade_limits", {})) + len(devise_policy.get("injection_defense", {}).get("block_patterns", [])),
         "enforcement_rate": f"{(blocked / max(1, passed + blocked)) * 100:.0f}%" if blocked else "0%",
+    }
+
+
+# ── OpenClaw Agent Endpoints ─────────────────────────────────────────────
+
+class AgentRequest(BaseModel):
+    instruction: str  # Natural language instruction
+
+@app.post("/v1/agent/run")
+async def run_openclaw_agent(req: AgentRequest):
+    """Run the OpenClaw autonomous agent with a natural language instruction.
+    
+    Example: "Research NVDA and buy 10 shares if it looks bullish"
+    The agent will:
+    1. Parse instruction using GPT
+    2. Plan multi-step actions
+    3. Enforce each step via ArmorClaw
+    4. Execute allowed actions on Alpaca
+    """
+    execution = await openclaw_agent.run(req.instruction)
+    return execution.to_dict()
+
+@app.get("/v1/agent/history")
+async def agent_history():
+    """Return recent OpenClaw agent execution history."""
+    return {
+        "executions": openclaw_agent.get_recent_executions(20),
+        "total": len(openclaw_agent.executions),
+        "skills_loaded": list(openclaw_agent.skills.keys()),
+    }
+
+@app.get("/v1/agent/skills")
+async def agent_skills():
+    """Return loaded OpenClaw skill definitions."""
+    return {
+        "skills": {
+            name: {
+                "name": skill.name,
+                "description": skill.description[:200],
+                "allowed_tools": skill.allowed_tools,
+                "forbidden_tools": skill.forbidden_tools,
+                "constraints": skill.constraints,
+            }
+            for name, skill in openclaw_agent.skills.items()
+        },
+        "total": len(openclaw_agent.skills),
+        "device_guard_scopes": list_all_scopes(),
     }
 
 
@@ -1166,6 +1223,7 @@ if __name__ == "__main__":
     print("  OpenClaw + ArmorClaw + Alpaca Paper Trading")
     print(f"  Alpaca:      {'✅ Connected' if alpaca_api else '⚠️  Simulated fallback'}")
     print(f"  ArmorIQ SDK: {'✅ Connected' if armoriq_client else '⚠️  Local enforcement only'}")
+    print(f"  OpenClaw:    ✅ Agent loaded ({len(openclaw_agent.skills)} skills)")
     print(f"  DeviceGuard: ✅ Loaded ({len(list_all_scopes())} agent scopes)")
     print(f"  OpenAI:      {'✅ GPT-4o-mini swarm' if OPENAI_KEY else '⚠️  Fallback scoring'}")
     print(f"  Policy:      {'✅ Loaded' if devise_policy else '⚠️  Not found'}")
