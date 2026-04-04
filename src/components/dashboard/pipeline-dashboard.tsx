@@ -342,36 +342,46 @@ export function PipelineDashboard() {
     const isIdle = phase === "IDLE" && !isRunning
 
     return (
-        <div className="min-h-screen bg-[#030303] text-white font-mono flex flex-col selection:bg-flame selection:text-black relative overflow-hidden">
-            {/* Subtle grid background */}
-            <div className="fixed inset-0 pointer-events-none opacity-[0.015] z-0"
-                style={{
-                    backgroundImage: `linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)`,
-                    backgroundSize: '60px 60px'
-                }}
-            />
+        <div className="min-h-screen bg-[#020204] text-white font-mono flex flex-col selection:bg-flame selection:text-black relative overflow-hidden">
+            {/* Premium gradient mesh background */}
+            <div className="fixed inset-0 pointer-events-none z-0">
+                <div className="absolute inset-0 opacity-[0.012]"
+                    style={{
+                        backgroundImage: `linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)`,
+                        backgroundSize: '48px 48px'
+                    }}
+                />
+                {/* Top ambient glow */}
+                <div className="absolute top-0 left-1/4 w-[600px] h-[300px] bg-gradient-to-b from-flame/[0.03] via-transparent to-transparent rounded-full blur-3xl" />
+                <div className="absolute top-0 right-1/4 w-[400px] h-[200px] bg-gradient-to-b from-sky-500/[0.02] via-transparent to-transparent rounded-full blur-3xl" />
+            </div>
 
             {/* ── HEADER ───────────────────────────────────────────────── */}
-            <header className="h-14 border-b border-white/[0.06] flex items-center justify-between px-4 sm:px-6 bg-[#050505]/80 backdrop-blur-xl sticky top-0 z-50">
+            <header className="h-14 border-b border-white/[0.05] flex items-center justify-between px-4 sm:px-6 bg-[#0a0a0f]/70 backdrop-blur-2xl sticky top-0 z-50 header-glow">
                 <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 bg-flame flex items-center justify-center font-black text-black text-sm">D</div>
+                    <div className="w-8 h-8 bg-gradient-to-br from-flame to-amber-500 flex items-center justify-center font-black text-black text-sm rounded-md shadow-lg shadow-flame/20">
+                        D
+                    </div>
                     <div className="hidden sm:block">
-                        <h1 className="text-xs font-black tracking-tight uppercase">Devise_Command_Center</h1>
-                        <p className="text-[9px] text-white/25 uppercase tracking-wider">ArmorClaw Enforcement Engine v2.0</p>
+                        <h1 className="text-xs font-black tracking-tight uppercase flex items-center gap-2">
+                            <span>Devise</span>
+                            <span className="text-[7px] px-1.5 py-0.5 bg-flame/15 text-flame rounded-sm font-bold">v3.0</span>
+                        </h1>
+                        <p className="text-[9px] text-white/30 uppercase tracking-wider">MiroFish Simulation · ArmorClaw Enforcement</p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                     {/* Market Status */}
                     <MarketStatus className="hidden md:flex" />
 
                     {/* Status indicator */}
                     <div className={cn(
-                        "flex items-center gap-2 px-3 py-1 text-[9px] font-black uppercase tracking-wider border transition-all duration-500",
-                        pipelineStatus === "EXECUTED" && "border-emerald-500/30 text-emerald-400 bg-emerald-500/5",
-                        pipelineStatus === "ALL_ATTACKS_BLOCKED" && "border-red-500/30 text-red-400 bg-red-500/5",
-                        pipelineStatus === "BLOCKED" && "border-flame/30 text-flame bg-flame/5",
-                        !pipelineStatus && "border-white/10 text-white/30",
+                        "flex items-center gap-2 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-md transition-all duration-500",
+                        pipelineStatus === "EXECUTED" && "border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 shadow-sm shadow-emerald-500/10",
+                        pipelineStatus === "ALL_ATTACKS_BLOCKED" && "border border-red-500/30 text-red-400 bg-red-500/10 shadow-sm shadow-red-500/10",
+                        pipelineStatus === "BLOCKED" && "border border-flame/30 text-flame bg-flame/10",
+                        !pipelineStatus && "border border-white/10 text-white/30",
                     )}>
                         <div className={cn(
                             "w-1.5 h-1.5 rounded-full",
@@ -380,27 +390,28 @@ export function PipelineDashboard() {
                         {isRunning ? "PROCESSING" : pipelineStatus || "STANDBY"}
                     </div>
 
-                    <div className="hidden lg:flex items-center gap-2 px-3 py-1 border border-flame/20 bg-flame/5">
+                    <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-flame/20 bg-flame/5">
                         <Waves className="w-3 h-3 text-flame animate-pulse" />
-                        <span className="text-[9px] text-flame/70 font-bold uppercase tracking-widest">PAPER</span>
+                        <span className="text-[8px] text-flame/70 font-bold uppercase tracking-widest">PAPER</span>
                     </div>
                 </div>
             </header>
 
             {/* ── MACRO INTEL BAR ──────────────────────────────────────── */}
-            <div className="h-8 bg-white/[0.01] border-b border-white/[0.04] flex items-center px-4 gap-4 overflow-hidden relative">
-                <div className="flex items-center gap-2 shrink-0 pr-4 border-r border-white/10 z-10">
-                    <span className="text-[8px] font-black text-flame/60 animate-pulse uppercase tracking-widest">INTEL</span>
+            <div className="h-8 bg-gradient-to-r from-[#0a0a0f]/80 via-[#0a0a0f]/60 to-[#0a0a0f]/80 border-b border-white/[0.03] flex items-center px-4 gap-4 overflow-hidden relative backdrop-blur-sm">
+                <div className="flex items-center gap-2 shrink-0 pr-4 border-r border-white/[0.06] z-10">
+                    <div className="w-1 h-1 rounded-full bg-flame animate-pulse" />
+                    <span className="text-[7px] font-black text-flame/50 uppercase tracking-[0.15em]">LIVE FEED</span>
                 </div>
                 <div className="flex gap-6 animate-marquee whitespace-nowrap">
                     {[...macroSignals, ...macroSignals].map((sig, i) => (
-                        <div key={i} className="flex items-center gap-3 text-[9px]">
-                            <span className="font-black text-white/60">{sig.ticker}</span>
+                        <div key={i} className="flex items-center gap-2.5 text-[9px]">
+                            <span className="font-black text-white/50">{sig.ticker}</span>
                             <span className={cn(
-                                "px-1 py-0.5 font-black text-[7px]",
-                                sig.priority === 'HIGH' ? 'bg-flame/20 text-flame' : 'text-white/20'
+                                "px-1.5 py-0.5 font-bold text-[7px] rounded-sm",
+                                sig.priority === 'HIGH' ? 'bg-flame/15 text-flame/80' : 'bg-white/5 text-white/25'
                             )}>{sig.priority}</span>
-                            <span className="text-white/20 italic">{sig.reasoning}</span>
+                            <span className="text-white/15">{sig.reasoning}</span>
                         </div>
                     ))}
                 </div>
@@ -460,9 +471,12 @@ export function PipelineDashboard() {
                                     <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
                                         {/* LEFT: Pipeline Controls (3/5) */}
                                         <div className="lg:col-span-3 space-y-4">
-                                            <div className="text-center space-y-1 mb-2">
-                                                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight">Enforcement<span className="text-flame">_Pipeline</span></h2>
-                                                <p className="text-[9px] text-white/20 uppercase tracking-[0.2em]">ArmorClaw + Policy Engine // Intent-Aware Execution</p>
+                                            <div className="text-center space-y-1.5 mb-3">
+                                                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight">
+                                                    <span className="gradient-text-flame">MiroFish</span>
+                                                    <span className="text-white/60">_Pipeline</span>
+                                                </h2>
+                                                <p className="text-[9px] text-white/25 uppercase tracking-[0.15em]">Swarm Simulation · ArmorClaw Enforcement · Live Execution</p>
                                             </div>
 
                                             {/* Seed Input */}
@@ -513,17 +527,17 @@ export function PipelineDashboard() {
                                             <div className="flex gap-3 pt-1">
                                                 <button
                                                     onClick={() => runPipeline(false)}
-                                                    className="group relative flex-1 px-6 py-4 bg-flame text-black font-black uppercase tracking-[0.3em] text-xs transition-all hover:bg-white active:translate-y-0.5 overflow-hidden"
+                                                    className="group relative flex-1 px-6 py-4 bg-gradient-to-r from-flame to-amber-500 text-black font-black uppercase tracking-[0.2em] text-xs transition-all hover:from-white hover:to-white active:translate-y-0.5 overflow-hidden rounded-md shadow-lg shadow-flame/20 hover:shadow-white/20"
                                                 >
                                                     <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                                                     <span className="relative flex items-center justify-center gap-2">
                                                         <Play className="w-3.5 h-3.5" />
-                                                        Initialize Pipeline
+                                                        Run Simulation
                                                     </span>
                                                 </button>
                                                 <button
                                                     onClick={() => runPipeline(true)}
-                                                    className="group relative px-5 py-4 bg-red-500/10 border-2 border-red-500/30 text-red-400 font-black uppercase tracking-[0.15em] text-[10px] transition-all hover:bg-red-500 hover:text-white active:translate-y-0.5"
+                                                    className="group relative px-5 py-4 bg-red-500/10 border border-red-500/25 text-red-400 font-black uppercase tracking-[0.15em] text-[10px] transition-all hover:bg-red-500 hover:text-white hover:border-red-500 active:translate-y-0.5 rounded-md hover:shadow-lg hover:shadow-red-500/20"
                                                 >
                                                     <span className="relative flex items-center justify-center gap-2">
                                                         <Skull className="w-3.5 h-3.5" />
@@ -819,13 +833,13 @@ export function PipelineDashboard() {
                 </section>
 
                 {/* ── RIGHT: Audit Trail ──────────────────────────────── */}
-                <aside className="w-full lg:w-[380px] bg-[#040404] flex flex-col border-t lg:border-t-0 border-white/[0.04]">
-                    <div className="h-10 border-b border-white/[0.04] flex items-center px-4 bg-[#060606] justify-between">
-                        <div className="flex items-center gap-2 text-[9px] font-black text-white/25 tracking-widest uppercase">
-                            <Terminal className="w-3 h-3 text-flame/50" /> Audit_Trail
+                <aside className="w-full lg:w-[380px] bg-[#040408]/80 backdrop-blur-sm flex flex-col border-t lg:border-t-0 border-l border-white/[0.03]">
+                    <div className="h-10 border-b border-white/[0.04] flex items-center px-4 bg-[#080810]/60 justify-between">
+                        <div className="flex items-center gap-2 text-[9px] font-black text-white/30 tracking-widest uppercase">
+                            <Terminal className="w-3 h-3 text-flame/40" /> Audit_Trail
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[8px] text-white/15 uppercase">{auditLog.length} entries</span>
+                            <span className="text-[7px] text-white/15 uppercase tracking-wider">{auditLog.length} entries</span>
                             <div className={cn("w-1.5 h-1.5 rounded-full", isRunning ? "bg-emerald-500 animate-pulse" : "bg-white/10")} />
                         </div>
                     </div>
@@ -884,16 +898,18 @@ export function PipelineDashboard() {
                     </div>
 
                     {/* Audit Stats Footer */}
-                    <div className="h-10 border-t border-white/[0.04] bg-[#060606] flex items-center justify-between px-4 text-[8px] text-white/20 uppercase tracking-wider font-black">
-                        <div className="flex items-center gap-3">
-                            <span className="text-emerald-500/60">
-                                ✓ {auditLog.filter(e => e.decision === "ALLOWED").length}
+                    <div className="h-10 border-t border-white/[0.04] bg-[#080810]/60 flex items-center justify-between px-4 text-[8px] text-white/20 uppercase tracking-wider font-black">
+                        <div className="flex items-center gap-4">
+                            <span className="flex items-center gap-1 text-emerald-500/60">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60" />
+                                {auditLog.filter(e => e.decision === "ALLOWED").length} passed
                             </span>
-                            <span className="text-red-500/60">
-                                ✗ {auditLog.filter(e => e.decision === "BLOCKED").length}
+                            <span className="flex items-center gap-1 text-red-500/60">
+                                <div className="w-1.5 h-1.5 rounded-full bg-red-500/60" />
+                                {auditLog.filter(e => e.decision === "BLOCKED").length} blocked
                             </span>
                         </div>
-                        <div className="text-white/10">ArmorClaw_v2</div>
+                        <div className="text-white/10">MiroFish + ArmorClaw</div>
                     </div>
                 </aside>
             </main>

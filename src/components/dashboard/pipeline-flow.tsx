@@ -3,7 +3,7 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { Brain, FileKey2, ShieldCheck, Rocket, ArrowRight } from "lucide-react"
+import { Brain, FileKey2, ShieldCheck, Rocket, ChevronRight } from "lucide-react"
 
 type NodePhase = "SWARM_ANALYST" | "RISK_AGENT" | "ARMORCLAW" | "DEVICE_POLICY" | "TRADER"
 type NodeStatus = "idle" | "processing" | "allowed" | "blocked"
@@ -17,16 +17,16 @@ interface PipelineFlowProps {
 
 const NODES = [
     { id: "SWARM_ANALYST", label: "MIROFISH", sub: "Simulation Engine", icon: Brain, color: "blue" },
-    { id: "RISK_AGENT", label: "RISK", sub: "Portfolio Validation", icon: FileKey2, color: "purple" },
+    { id: "RISK_AGENT", label: "RISK", sub: "Policy Validation", icon: FileKey2, color: "purple" },
     { id: "ARMORCLAW", label: "ARMORCLAW", sub: "Intent Enforcement", icon: ShieldCheck, color: "flame" },
     { id: "TRADER", label: "TRADER", sub: "Paper Execution", icon: Rocket, color: "green" },
 ]
 
-const COLOR_MAP: Record<string, { border: string; bg: string; text: string; glow: string }> = {
-    blue: { border: "border-blue-500", bg: "bg-blue-500/10", text: "text-blue-400", glow: "shadow-[0_0_30px_rgba(59,130,246,0.3)]" },
-    purple: { border: "border-purple-500", bg: "bg-purple-500/10", text: "text-purple-400", glow: "shadow-[0_0_30px_rgba(168,85,247,0.3)]" },
-    flame: { border: "border-flame", bg: "bg-flame/10", text: "text-flame", glow: "shadow-[0_0_30px_rgba(254,127,45,0.3)]" },
-    green: { border: "border-emerald-500", bg: "bg-emerald-500/10", text: "text-emerald-400", glow: "shadow-[0_0_30px_rgba(16,185,129,0.3)]" },
+const COLOR_MAP: Record<string, { border: string; bg: string; text: string; glow: string; ring: string }> = {
+    blue:   { border: "border-sky-500/60",     bg: "bg-sky-500/8",     text: "text-sky-400",     glow: "shadow-[0_0_25px_rgba(56,189,248,0.2)]",  ring: "ring-sky-500/30" },
+    purple: { border: "border-purple-500/60",  bg: "bg-purple-500/8",  text: "text-purple-400",  glow: "shadow-[0_0_25px_rgba(168,85,247,0.2)]",  ring: "ring-purple-500/30" },
+    flame:  { border: "border-flame/60",       bg: "bg-flame/8",       text: "text-flame",       glow: "shadow-[0_0_25px_rgba(254,127,45,0.2)]",  ring: "ring-flame/30" },
+    green:  { border: "border-emerald-500/60", bg: "bg-emerald-500/8", text: "text-emerald-400", glow: "shadow-[0_0_25px_rgba(16,185,129,0.2)]",  ring: "ring-emerald-500/30" },
 }
 
 export function PipelineFlow({ activePhase, nodeStatuses, className }: PipelineFlowProps) {
@@ -43,45 +43,50 @@ export function PipelineFlow({ activePhase, nodeStatuses, className }: PipelineF
                         <motion.div
                             animate={
                                 isActive
-                                    ? { scale: [1, 1.03, 1], transition: { repeat: Infinity, duration: 1.5 } }
+                                    ? { scale: [1, 1.02, 1], transition: { repeat: Infinity, duration: 2, ease: "easeInOut" } }
                                     : { scale: 1 }
                             }
                             className={cn(
-                                "relative flex flex-col items-center gap-2 p-3 sm:p-4 border-2 min-w-[90px] sm:min-w-[120px] transition-all duration-500",
-                                status === "idle" && "border-white/5 bg-white/[0.01]",
-                                status === "processing" && cn(colors.border, colors.bg, colors.glow),
-                                status === "allowed" && "border-emerald-500 bg-emerald-500/10 shadow-[0_0_25px_rgba(16,185,129,0.2)]",
-                                status === "blocked" && "border-red-500 bg-red-500/10 shadow-[0_0_25px_rgba(239,68,68,0.3)]",
+                                "relative flex flex-col items-center gap-2.5 p-3 sm:p-4 rounded-xl min-w-[90px] sm:min-w-[120px] transition-all duration-500",
+                                status === "idle" && "border border-white/[0.04] bg-white/[0.01]",
+                                status === "processing" && cn("border", colors.border, colors.bg, colors.glow),
+                                status === "allowed" && "border border-emerald-500/40 bg-emerald-500/8 shadow-[0_0_20px_rgba(16,185,129,0.15)]",
+                                status === "blocked" && "border border-red-500/40 bg-red-500/8 shadow-[0_0_20px_rgba(239,68,68,0.2)]",
                             )}
                         >
-                            {/* Processing indicator */}
+                            {/* Processing ring pulse */}
                             {status === "processing" && (
                                 <motion.div
-                                    className="absolute inset-0 border-2 border-white/20"
-                                    animate={{ opacity: [0.3, 0.8, 0.3] }}
-                                    transition={{ repeat: Infinity, duration: 1.2 }}
+                                    className={cn("absolute inset-0 rounded-xl border", colors.border)}
+                                    animate={{ opacity: [0.2, 0.6, 0.2], scale: [1, 1.02, 1] }}
+                                    transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
                                 />
                             )}
 
                             {/* Status dot */}
                             <div className={cn(
-                                "absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full border border-black",
+                                "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-[#020204] transition-all duration-300",
                                 status === "idle" && "bg-white/10",
-                                status === "processing" && cn("animate-pulse", node.color === "flame" ? "bg-flame" : node.color === "green" ? "bg-emerald-500" : node.color === "purple" ? "bg-purple-500" : "bg-blue-500"),
+                                status === "processing" && cn("animate-pulse",
+                                    node.color === "flame" ? "bg-flame" :
+                                    node.color === "green" ? "bg-emerald-500" :
+                                    node.color === "purple" ? "bg-purple-500" : "bg-sky-500"),
                                 status === "allowed" && "bg-emerald-500",
                                 status === "blocked" && "bg-red-500",
                             )} />
 
+                            {/* Icon circle */}
                             <div className={cn(
-                                "w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center border transition-all duration-500",
-                                status === "idle" && "border-white/10 text-white/20",
-                                status === "processing" && cn(colors.border, colors.text),
-                                status === "allowed" && "border-emerald-500 text-emerald-400",
-                                status === "blocked" && "border-red-500 text-red-400",
+                                "w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg transition-all duration-500",
+                                status === "idle" && "bg-white/[0.03] text-white/15",
+                                status === "processing" && cn(colors.bg, colors.text),
+                                status === "allowed" && "bg-emerald-500/15 text-emerald-400",
+                                status === "blocked" && "bg-red-500/15 text-red-400",
                             )}>
                                 <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                             </div>
 
+                            {/* Label */}
                             <div className="text-center">
                                 <div className={cn(
                                     "text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-500",
@@ -92,21 +97,21 @@ export function PipelineFlow({ activePhase, nodeStatuses, className }: PipelineF
                                 )}>
                                     {node.label}
                                 </div>
-                                <div className="text-[7px] sm:text-[8px] text-white/20 uppercase tracking-wider mt-0.5 hidden sm:block">
+                                <div className="text-[7px] sm:text-[8px] text-white/15 uppercase tracking-wider mt-0.5 hidden sm:block">
                                     {node.sub}
                                 </div>
                             </div>
 
-                            {/* Status text */}
+                            {/* Status badge */}
                             <AnimatePresence>
                                 {(status === "allowed" || status === "blocked") && (
                                     <motion.div
-                                        initial={{ opacity: 0, scale: 0.5 }}
-                                        animate={{ opacity: 1, scale: 1 }}
+                                        initial={{ opacity: 0, scale: 0.5, y: 4 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
                                         className={cn(
-                                            "absolute -bottom-3 text-[7px] sm:text-[8px] font-black uppercase px-2 py-0.5 border",
-                                            status === "allowed" && "bg-emerald-500/20 border-emerald-500/40 text-emerald-400",
-                                            status === "blocked" && "bg-red-500/20 border-red-500/40 text-red-400",
+                                            "absolute -bottom-2.5 text-[7px] sm:text-[8px] font-black uppercase px-2 py-0.5 rounded-full",
+                                            status === "allowed" && "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 shadow-sm shadow-emerald-500/10",
+                                            status === "blocked" && "bg-red-500/20 border border-red-500/30 text-red-400 shadow-sm shadow-red-500/10",
                                         )}
                                     >
                                         {status === "allowed" ? "✓ PASS" : "✗ BLOCKED"}
@@ -117,22 +122,30 @@ export function PipelineFlow({ activePhase, nodeStatuses, className }: PipelineF
 
                         {/* Connector */}
                         {idx < NODES.length - 1 && (
-                            <div className="flex items-center relative h-8 min-w-[20px] sm:min-w-[40px]">
-                                <div className="absolute top-1/2 left-0 right-0 h-px bg-white/10 -translate-y-1/2" />
-                                {/* Animated data pulse */}
+                            <div className="flex items-center relative h-8 min-w-[20px] sm:min-w-[36px]">
+                                {/* Line */}
+                                <div className="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2">
+                                    <div className={cn(
+                                        "h-full w-full transition-all duration-500",
+                                        nodeStatuses[NODES[idx].id] === "allowed" ? "bg-gradient-to-r from-emerald-500/50 to-emerald-500/20" :
+                                        nodeStatuses[NODES[idx].id] === "blocked" ? "bg-gradient-to-r from-red-500/50 to-red-500/10" :
+                                        "bg-white/[0.06]"
+                                    )} />
+                                </div>
+                                {/* Animated pulse */}
                                 {(nodeStatuses[NODES[idx].id] === "allowed" || nodeStatuses[NODES[idx].id] === "processing") && (
                                     <motion.div
-                                        className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-emerald-500/60"
+                                        className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-400/70 blur-[1px]"
                                         initial={{ left: 0, opacity: 0 }}
                                         animate={{ left: "100%", opacity: [0, 1, 1, 0] }}
                                         transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
                                     />
                                 )}
-                                <ArrowRight className={cn(
+                                <ChevronRight className={cn(
                                     "w-3 h-3 relative z-10 mx-auto transition-colors duration-500",
-                                    nodeStatuses[NODES[idx].id] === "allowed" ? "text-emerald-500" :
-                                    nodeStatuses[NODES[idx].id] === "blocked" ? "text-red-500" :
-                                    "text-white/10"
+                                    nodeStatuses[NODES[idx].id] === "allowed" ? "text-emerald-500/60" :
+                                    nodeStatuses[NODES[idx].id] === "blocked" ? "text-red-500/60" :
+                                    "text-white/[0.08]"
                                 )} />
                             </div>
                         )}
