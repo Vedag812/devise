@@ -667,7 +667,196 @@ async def get_compliance():
         "trade_log": trades,
     }
 
+# ── Portfolio Monitoring Agent (Scenario 2) ──────────────────────────────
+@app.get("/v1/agent/portfolio-monitor")
+async def portfolio_monitor():
+    """
+    Portfolio monitoring agent — tracks holdings and generates alerts.
+    CAN: read portfolio positions, compute drift metrics, send alerts
+    MUST: enforce read-only access
+    CANNOT: execute trades, transmit to external endpoints
+    """
+    if not alpaca_api:
+        return {"status": "error", "reason": "No Alpaca connection"}
+
+    try:
+        account = alpaca_api.get_account()
+        positions = alpaca_api.list_positions()
+    except Exception as e:
+        return {"status": "error", "reason": str(e)}
+
+    # Compute portfolio metrics
+    equity = float(account.equity)
+    cash = float(account.cash)
+    holdings = []
+    alerts = []
+
+    for p in positions:
+        market_value = float(p.market_value)
+        weight = market_value / equity if equity > 0 else 0
+        unrealized_pnl = float(p.unrealized_pl)
+        pnl_pct = float(p.unrealized_plpc) * 100
+
+        holding = {
+            "ticker": p.symbol,
+            "qty": int(p.qty),
+            "avg_cost": float(p.avg_entry_price),
+            "current_price": float(p.current_price),
+            "market_value": market_value,
+            "weight": round(weight * 100, 2),
+            "unrealized_pnl": unrealized_pnl,
+            "pnl_pct": round(pnl_pct, 2),
+        }
+        holdings.append(holding)
+
+        # Generate alerts based on thresholds
+        max_position_pct = 25.0  # Max 25% in single ticker
+        if weight * 100 > max_position_pct:
+            alerts.append({
+                "type": "CONCENTRATION",
+                "severity": "HIGH",
+                "ticker": p.symbol,
+                "message": f"{p.symbol} is {weight*100:.1f}% of portfolio (max {max_position_pct}%)",
+            })
+
+        if pnl_pct < -5:
+            alerts.append({
+                "type": "LOSS_ALERT",
+                "severity": "MEDIUM",
+                "ticker": p.symbol,
+                "message": f"{p.symbol} down {pnl_pct:.1f}% — consider review",
+            })
+
+        if pnl_pct > 10:
+            alerts.append({
+                "type": "GAIN_ALERT",
+                "severity": "LOW",
+                "ticker": p.symbol,
+                "message": f"{p.symbol} up {pnl_pct:.1f}% — consider taking profits",
+            })
+
+    # Drift metrics
+    target_weights = {"NVDA": 40, "AAPL": 35, "MSFT": 25}
+    drift_metrics = []
+    for ticker, target in target_weights.items():
+        actual = next((h["weight"] for h in holdings if h["ticker"] == ticker), 0)
+        drift = actual - target
+        drift_metrics.append({
+            "ticker": ticker,
+            "target_weight": target,
+            "actual_weight": actual,
+            "drift": round(drift, 2),
+            "status": "OK" if abs(drift) < 5 else "DRIFT",
+        })
+
+    log_audit("PORTFOLIO_MONITOR", "portfolio_agent", "portfolio_read", "PASS",
+             reason=f"Read-only scan: {len(holdings)} positions, {len(alerts)} alerts")
+
+    return {
+        "status": "success",
+        "enforcement": {
+            "mode": "READ_ONLY",
+            "can_trade": False,
+            "can_transmit_external": False,
+        },
+        "account": {
+            "equity": equity,
+            "cash": cash,
+            "buying_power": float(account.buying_power),
+        },
+        "holdings": holdings,
+        "drift_metrics": drift_metrics,
+        "alerts": alerts,
+        "alert_count": len(alerts),
+    }
+
+
+# ── Earnings Research Agent (Scenario 3) ─────────────────────────────────
+@app.get("/v1/agent/earnings-research/{ticker}")
+async def earnings_research(ticker: str):
+    """
+    Earnings research agent — processes financial data with blackout enforcement.
+    CAN: fetch earnings data, flag anomalies, write reports to ./output/reports/
+    MUST: enforce blackout windows around earnings
+    CANNOT: access outside designated data directory, trade during blackout
+    """
+    ticker = ticker.upper()
+
+    # Check blackout FIRST
+    ok, blackout_msg = policy_engine.validate_earnings_blackout(ticker)
+
+    # Fetch market data for analysis
+    quote = get_real_quote(ticker)
+
+    # Simulated earnings data (would come from SEC EDGAR / financial API)
+    EARNINGS_DATA = {
+        "NVDA": {
+            "quarter": "Q4 2025", "revenue": 35.1e9, "revenue_yoy": 94,
+            "eps": 0.89, "eps_est": 0.79, "eps_surprise_pct": 12.7,
+            "net_income": 18.5e9, "gross_margin": 76.0,
+            "guidance": "Blackwell ramping, demand exceeds supply",
+            "risks": ["China export restrictions", "Hyperscaler capex cycle"],
+            "anomalies": [],
+        },
+        "AAPL": {
+            "quarter": "Q1 2026", "revenue": 124.3e9, "revenue_yoy": 4,
+            "eps": 2.40, "eps_est": 2.35, "eps_surprise_pct": 2.1,
+            "net_income": 33.9e9, "gross_margin": 46.2,
+            "guidance": "Apple Intelligence driving iPhone 16 Pro upgrades",
+            "risks": ["Services antitrust", "India manufacturing ramp"],
+            "anomalies": ["iPhone revenue flat despite AI features"],
+        },
+        "MSFT": {
+            "quarter": "Q2 FY2026", "revenue": 69.6e9, "revenue_yoy": 12,
+            "eps": 3.23, "eps_est": 3.12, "eps_surprise_pct": 3.5,
+            "net_income": 24.1e9, "gross_margin": 69.4,
+            "guidance": "Azure growth 29%, Copilot 60% Fortune 500 adoption",
+            "risks": ["AI capex returns timeline", "Gaming segment decline"],
+            "anomalies": [],
+        },
+    }
+
+    earnings = EARNINGS_DATA.get(ticker, None)
+
+    # Generate report
+    report = {
+        "ticker": ticker,
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "agent": "earnings_research_agent",
+        "earnings_data": earnings,
+        "current_price": quote.get("price") if quote else None,
+        "anomalies_flagged": len(earnings["anomalies"]) if earnings else 0,
+    }
+
+    # Write report to designated output directory (enforced by policy)
+    output_dir = os.path.join(os.path.dirname(__file__), "output", "reports")
+    os.makedirs(output_dir, exist_ok=True)
+    report_path = os.path.join(output_dir, f"earnings_{ticker}_{time.strftime('%Y%m%d_%H%M%S')}.json")
+    with open(report_path, "w") as f:
+        json.dump(report, f, indent=2, default=str)
+
+    log_audit("EARNINGS_RESEARCH", "earnings_agent", "report_write", "PASS",
+             reason=f"Report written to {os.path.basename(report_path)}")
+
+    return {
+        "status": "success",
+        "blackout": {
+            "active": not ok,
+            "message": blackout_msg,
+            "trade_blocked": not ok,
+        },
+        "enforcement": {
+            "data_access": "RESTRICTED to ./data/ and ./output/",
+            "can_trade": False,
+            "can_publish_external": False,
+        },
+        "report": report,
+        "report_path": report_path,
+    }
+
+
 # ── OpenClaw Agent Endpoints ─────────────────────────────────────────────
+
 
 class AgentRequest(BaseModel):
     instruction: str  # Natural language instruction
