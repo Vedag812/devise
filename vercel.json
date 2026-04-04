@@ -10,5 +10,8 @@
   },
   "env": {
     "VITE_API_URL": "https://devise-backend.onrender.com"
-  }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
