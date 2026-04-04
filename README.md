@@ -118,7 +118,7 @@ The file `skills/policy/devise_policy.yaml` is the single source of truth for al
 
 ## Demo
 
-- **Live Demo:** [https://devise-pipeline.vercel.app](https://devise-pipeline.vercel.app)
+- **Live Demo:** [https://devise-chi.vercel.app](https://devise-chi.vercel.app)
 - **Backend API:** [https://devise-backend.onrender.com](https://devise-backend.onrender.com)
 - **Demo Video:** [PASTE YOUR VIDEO LINK HERE]
 
