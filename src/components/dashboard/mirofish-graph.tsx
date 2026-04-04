@@ -1,8 +1,7 @@
 "use client"
 import * as React from "react"
-import { RefreshCw, Loader2, X } from "lucide-react"
+import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { API, fetchWithRetry } from "@/lib/api"
 
 /* ════════════════════════════════════════════════════════════
    MiroFish Graph — Entity Relationship Visualization
@@ -208,41 +207,27 @@ function simulate(nodes: GraphNode[], edges: GraphEdge[], W: number, H: number) 
     })
 }
 
-export function MiroFishGraph() {
+export function MiroFishGraph({ simData }: { simData?: any }) {
     const canvasRef = React.useRef<HTMLCanvasElement>(null)
     const [nodes, setNodes] = React.useState<GraphNode[]>([])
     const [edges, setEdges] = React.useState<GraphEdge[]>([])
     const [selectedNode, setSelectedNode] = React.useState<GraphNode | null>(null)
     const [hoveredNode, setHoveredNode] = React.useState<GraphNode | null>(null)
-    const [simData, setSimData] = React.useState<any>(null)
-    const [loading, setLoading] = React.useState(false)
+    const [active, setActive] = React.useState(false)
     const nodesRef = React.useRef(nodes)
     const edgesRef = React.useRef(edges)
+    const frameRef = React.useRef(0)
     const W = 900, H = 600
 
-    // Load sim data
-    const runSim = () => {
-        setLoading(true)
-        fetchWithRetry(API.pipelineRun, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ticker: "NVDA", action: "BUY", quantity: 10, confidence: 0.8, reason: "NVDA strong Q4 earnings beat" })
-        }).then(r => r.json()).then(d => {
-            setSimData(d.stages?.[0])
-            const { nodes: n, edges: e } = buildGraphData(d.stages?.[0])
-            setNodes(n); setEdges(e)
-            nodesRef.current = n; edgesRef.current = e
-        }).catch(() => {
-            const { nodes: n, edges: e } = buildGraphData()
-            setNodes(n); setEdges(e)
-            nodesRef.current = n; edgesRef.current = e
-        }).finally(() => setLoading(false))
-    }
-
+    // Build graph when simData arrives from parent pipeline
     React.useEffect(() => {
-        const { nodes: n, edges: e } = buildGraphData()
+        if (!simData) return
+        const { nodes: n, edges: e } = buildGraphData(simData)
         setNodes(n); setEdges(e)
         nodesRef.current = n; edgesRef.current = e
-    }, [])
+        frameRef.current = 0 // restart physics
+        setActive(true)
+    }, [simData])
 
     // Animation loop
     React.useEffect(() => {
@@ -252,16 +237,37 @@ export function MiroFishGraph() {
         if (!ctx) return
 
         let animId: number
-        let frame = 0
 
         const draw = () => {
             const ns = nodesRef.current
             const es = edgesRef.current
-            if (ns.length === 0) { animId = requestAnimationFrame(draw); return }
+
+            ctx.clearRect(0, 0, W, H)
+            ctx.fillStyle = "#0a0e1a"
+            ctx.fillRect(0, 0, W, H)
+
+            // Grid
+            ctx.strokeStyle = "rgba(255,255,255,0.02)"
+            ctx.lineWidth = 1
+            for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke() }
+            for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke() }
+
+            if (ns.length === 0) {
+                // Empty state
+                ctx.fillStyle = "rgba(255,255,255,0.08)"
+                ctx.font = "bold 14px Inter, sans-serif"
+                ctx.textAlign = "center"
+                ctx.fillText("MIROFISH", W/2, H/2 - 20)
+                ctx.fillStyle = "rgba(255,255,255,0.04)"
+                ctx.font = "11px Inter, sans-serif"
+                ctx.fillText("Run the pipeline to visualize entity relationships", W/2, H/2 + 8)
+                animId = requestAnimationFrame(draw)
+                return
+            }
 
             // Simulate physics
-            if (frame < 300) simulate(ns, es, W, H)
-            frame++
+            if (frameRef.current < 300) simulate(ns, es, W, H)
+            frameRef.current++
 
             ctx.clearRect(0, 0, W, H)
 
@@ -367,7 +373,7 @@ export function MiroFishGraph() {
 
         draw()
         return () => cancelAnimationFrame(animId)
-    }, [nodes.length, hoveredNode, selectedNode, simData])
+    }, [nodes.length, hoveredNode, selectedNode, active])
 
     // Mouse interaction
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -415,12 +421,12 @@ export function MiroFishGraph() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-[9px] text-white/30">Step 4/5 报告生成</span>
-                    <span className="text-[9px] text-emerald-400">• Completed</span>
-                    <button onClick={runSim} className="text-white/30 hover:text-white/60 transition-all ml-2"
-                        title="Run simulation">
-                        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                    </button>
+                    {active ? (
+                        <><span className="text-[9px] text-white/30">Step 4/5 报告生成</span>
+                        <span className="text-[9px] text-emerald-400">• Completed</span></>
+                    ) : (
+                        <span className="text-[9px] text-white/20">Waiting for pipeline...</span>
+                    )}
                 </div>
             </div>
 

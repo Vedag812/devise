@@ -474,7 +474,7 @@ export function PipelineDashboard() {
                     </div>
 
                     {/* ── ROW 5: MIROFISH ENTITY GRAPH ── */}
-                    <MiroFishGraph />
+                    <MiroFishGraph simData={Object.keys(sectorResults).length > 0 ? { agent_breakdown: sectorResults } : undefined} />
 
                     {/* ── ROW 6: AGENT PANELS ── */}
                     <div className="grid grid-cols-3 gap-4">

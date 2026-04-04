@@ -1,0 +1,23 @@
+{
+  "ticker": "NVDA",
+  "generated_at": "2026-04-04T12:30:54",
+  "agent": "earnings_research_agent",
+  "earnings_data": {
+    "quarter": "Q4 2025",
+    "revenue": 35100000000.0,
+    "revenue_yoy": 94,
+    "eps": 0.89,
+    "eps_est": 0.79,
+    "eps_surprise_pct": 12.7,
+    "net_income": 18500000000.0,
+    "gross_margin": 76.0,
+    "guidance": "Blackwell ramping, demand exceeds supply",
+    "risks": [
+      "China export restrictions",
+      "Hyperscaler capex cycle"
+    ],
+    "anomalies": []
+  },
+  "current_price": 177.305,
+  "anomalies_flagged": 0
+}
